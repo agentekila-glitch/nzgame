@@ -82,7 +82,16 @@ body.fit{overflow:hidden; background:#0B0912}
 body.fit .app{position:fixed; max-width:none; margin:0; padding:0}
 body.fit .stage{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); aspect-ratio:auto; border-radius:0; box-shadow:none}
 body.fit.rot .stage{transform:translate(-50%,-50%) rotate(90deg)}
-body.fit .hint{display:none}
+body.fit .hint, body.fit .mfoot, body.fit .kbonly{display:none}
+body:not(.fit) .touchonly{display:none}
+body.fit{overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent}
+body.fit button{touch-action:manipulation}
+body.fit .hudbtn, body.fit .mute{width:40px; height:40px; font-size:16px}
+body.fit .hudbtn{right:58px} body.fit .hudbtn.pbtn{right:104px; font-size:12px} body.fit .hudbtn.fsbtn{right:150px}
+body.fit .dlg .ctrl button{font-size:13px; padding:.65em 1.15em}
+body.fit .dlg .box{padding-bottom:46px}
+body.fit .mnav button{padding-top:.42em; padding-bottom:.42em}
+body.fit .srow{padding:.75em 0}
 .rotate{position:fixed; inset:0; z-index:50; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center;
   background:#0B0912; color:#F4EDDF; font:700 16px var(--sans)}
 .rotate .ph{font:700 24px var(--serif); margin:0}
@@ -155,7 +164,7 @@ kbd{display:inline-block; min-width:1.8em; padding:1px 7px; margin:0 2px; backgr
 .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
 
 .touch{position:absolute; left:0; right:0; bottom:0; z-index:4; display:none; justify-content:space-between; padding:clamp(8px,2cqw,18px); pointer-events:none}
-.touch.on{display:flex}
+.stage.playing .touch.on{display:flex}
 .touch .g{display:flex; gap:12px; align-items:flex-end}
 .touch button{pointer-events:auto; width:clamp(54px,9.5cqw,80px); height:clamp(54px,9.5cqw,80px); border:0; border-radius:50%;
   background:rgba(244,237,223,.14); color:#F4EDDF; font:800 clamp(18px,3cqw,26px) var(--sans); box-shadow:inset 0 0 0 2px rgba(244,237,223,.4)}
@@ -243,8 +252,10 @@ kbd{display:inline-block; min-width:1.8em; padding:1px 7px; margin:0 2px; backgr
         <div class="srow"><label for="sVibro">Вибрация<small>Только на телефоне</small></label><input type="checkbox" class="sw" id="sVibro"></div>
         <div class="srow"><label for="sHints">Подсказки в мире</label><input type="checkbox" class="sw" id="sHints"></div>
         <details class="ctrls"><summary>Управление</summary>
-          <p><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> — бег · <kbd>Shift</kbd> — быстрее · <kbd>Пробел</kbd> / <kbd>W</kbd> / <kbd>Z</kbd> — прыжок (держи — выше) · <kbd>↓</kbd> — спрыгнуть с доски</p>
-          <p><kbd>Enter</kbd> / клик — дальше в диалоге · <kbd>Esc</kbd> — пропустить сцену или пауза · <kbd>J</kbd> — журнал · <kbd>F</kbd> — полный экран · <kbd>M</kbd> — звук</p>
+          <p class="touchonly"><kbd>◀</kbd><kbd>▶</kbd> — бег · <kbd>▲</kbd> — прыжок (держи — выше, в воздухе ещё раз — двойной) · <kbd>▼</kbd> — спрыгнуть с доски</p>
+          <p class="touchonly">Тап по экрану — дальше в диалоге · «Пропустить» — пропустить сцену · ❚❚ — пауза · ✎ — журнал · ♪ — звук</p>
+          <p class="kbonly"><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> — бег · <kbd>Shift</kbd> — быстрее · <kbd>Пробел</kbd> / <kbd>W</kbd> / <kbd>Z</kbd> — прыжок (держи — выше) · <kbd>↓</kbd> — спрыгнуть с доски</p>
+          <p class="kbonly"><kbd>Enter</kbd> / клик — дальше в диалоге · <kbd>Esc</kbd> — пропустить сцену или пауза · <kbd>J</kbd> — журнал · <kbd>F</kbd> — полный экран · <kbd>M</kbd> — звук</p>
         </details>
         <div class="row"><button class="ghost" id="sReset">Сбросить</button><button class="big" id="sDone">Готово</button></div>
       </div>
@@ -348,6 +359,10 @@ document.querySelectorAll('.touch button').forEach(btn => {
 });
 if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window){ $('touch').classList.add('on'); touchMode = true; }
 $('dlg').addEventListener('pointerdown', e => { e.stopPropagation(); advanceQueued = true; });
+$('stage').addEventListener('pointerdown', e => {
+  if (e.target.closest('button, .screen, .journal, .touch')) return;
+  if (G1.S && ['dialog','card'].includes(G1.S.mode)) advanceQueued = true;
+});
 
 let hapticHook = null;
 function buzz(ms){ if (!SET.vibro) return; if (hapticHook){ hapticHook(ms); return; } try { if (navigator.vibrate && touchMode) navigator.vibrate(ms); } catch(e){} }
@@ -532,11 +547,11 @@ const SCENES = {
   ]
 };
 const HINTS = [
-  {c:9, r:13, t:'← → бег  ·  Пробел — прыжок, держи дольше — выше'},
+  {c:9, r:13, t:'← → бег  ·  Пробел — прыжок, держи дольше — выше', tt:'◀ ▶ бег  ·  ▲ прыжок, держи дольше — выше'},
   {c:47, r:11, t:'Прыгни на кляксу — вернёшь ей цвет'},
   {c:93, r:12, t:'Колючки жгутся. Доски — твои друзья'},
   {c:122, r:13, t:'Наверх, к куполу!'},
-  {c:152, r:2, t:'Двойной прыжок: Пробел ещё раз в воздухе'}
+  {c:152, r:2, t:'Двойной прыжок: Пробел ещё раз в воздухе', tt:'Двойной прыжок: ▲ ещё раз в воздухе'}
 ];
 
 /* ================= Персонажи (вектор, чернильный контур) ================= */
@@ -1025,7 +1040,7 @@ function moveEntity(e, dt, allowOneWay, isPlayer){
 function newState(){
   const W = parseWorld();
   const S0 = {W, mode:'title', time:0, play:0, cam:{x:0,y:W.h-VH, kx:0, ky:0, kvy:0}, particles:[], shake:0, hitstop:0, flash:0, white:0,
-    petals:3, drops:0, inks:0, faints:0, scene:null, flags:{}, wave:null, hasVeshka:true, canDouble:false, beat:0, hints:HINTS.map(h => ({...h, a:0}))};
+    petals:3, drops:0, inks:0, faints:0, scene:null, flags:{}, wave:null, hasVeshka:true, canDouble:false, beat:0, hints:HINTS.map(h => ({...h, t:touchMode && h.tt ? h.tt : h.t, a:0}))};
   S0.P = {x:W.start.x, y:W.start.y, w:24, h:44, vx:0, vy:0, face:1, onGround:true, coyote:0, jumpBuf:0, jumping:false, doubled:false,
     inv:0, knock:0, drop:0, phase:0, sx:1, sy:1, svx:0, svy:0, sway:{x:0,y:0}, lastFoot:0, checkpoint:{x:W.start.x, y:W.start.y}, headBonk:0, idleT:0};
   const jp = JULIA_PATH[0];
@@ -1146,7 +1161,7 @@ function updatePlayer(dt){
 /* ================= Враги, наброски, Вешка ================= */
 function updateWorld(dt, interact){
   const W = S.W, p = S.P;
-  for (const f of Object.values(W.fades)){
+  if (S.mode !== 'dialog') for (const f of Object.values(W.fades)){
     if (f.state === 'shake'){ f.t += dt; if (f.t > .55){ f.state = 'gone'; f.t = 0; sfx.crumble();
       burst(f.c*T + 16, f.r*T + 6, 10, ['#EDE6D6','#CFC7B6','#8A8494'], {angle:Math.PI/2, spread:1, min:20, max:120, g:600, kind:'paper'}); } }
     else if (f.state === 'gone'){ f.t += dt; if (f.t > 2.8 && !(overlap(p, {x:f.c*T, y:f.r*T - 4, w:T, h:T}))){ f.state = 'ok'; f.back = 1; } }
@@ -1198,7 +1213,7 @@ function updateJulia(dt){
     if (S.mode !== 'play') return;
     const last = J.i >= JULIA_PATH.length - 1;
     const dx = J.x - (p.x + p.w/2), dy = J.y - (p.y + p.h);
-    if (last){ J.face = dx > 0 ? -1 : 1; if (Math.abs(dx) < 46 && Math.abs(dy) < 60) startScene('catch'); return; }
+    if (last){ J.face = dx > 0 ? -1 : 1; if (Math.abs(dx) < 46 && Math.abs(dy) < 60 && p.onGround) startScene('catch'); return; }
     if (Math.abs(dx) < 230 && Math.abs(dy) < 300 || dx < 0){
       const n = JULIA_PATH[J.i+1]; J.from = {x:J.x, y:J.y}; J.to = {x:n[0]*T + 16, y:n[1]*T};
       const dist = Math.hypot(J.to.x - J.from.x, J.to.y - J.from.y); J.dur = clamp(dist/430, .38, 1.1); J.t = 0; J.state = 'hop'; J.i++;
@@ -1297,6 +1312,7 @@ function sceneAct(a){
 function endScene(){
   const name = S.scene.name; S.scene = null; $('dlg').classList.remove('on'); S.mode = 'play'; jumpQueued = false; advanceQueued = false;
   for (const kk in keys) if (!['ShiftLeft','ShiftRight'].includes(kk)) keys[kk] = false;
+  for (const f of Object.values(S.W.fades)) if (f.state === 'shake') f.t = 0;
   if (name === 'prologue'){ S.prologue = false; startCard(); return; }
   if (name === 'intro'){ setMusic(true, 'chase'); saveGame(); }
   if (name === 'catch'){ S.wave = {x:S.P.x - 640, speed:120, t:0}; setMusic(true, 'escape'); S.flags.escape = true;
@@ -1337,14 +1353,16 @@ function update(dt){
   if (S.mode === 'card'){ S.cardT += dt; updateWorld(dt, false); updateCamera(dt); if (S.cardT > 3.4 || (advanceQueued && S.cardT > .6)){ advanceQueued = false; startScene('intro'); } return; }
   if (S.mode === 'dialog' && S.prologue){ if (S.scene){ S.scene.slideT = (S.scene.slideT || 0) + dt; } updateScene(dt); return; }
   if (S.mode === 'dialog'){ updateScene(dt); updateWorld(dt, false); updateJulia(dt); updateCamera(dt);
-    const p = S.P; p.vx = approach(p.vx, 0, 3000*dt); p.vy += G*dt; moveEntity(p, dt, true, true); return; }
+    const p = S.P; p.vx = approach(p.vx, 0, 3000*dt);
+    if (!p.onGround){ p.vy += G*dt; moveEntity(p, dt, true, true); if (p.y > S.W.h - p.h){ p.y = S.W.h - p.h; p.vy = 0; } }
+    return; }
   if (S.mode === 'faint'){ S.fT += dt; S.white = Math.min(1, S.fT*2); if (S.fT > .9){ respawn(); } return; }
   S.white = Math.max(0, S.white - dt*1.5);
   if (S.mode === 'play'){
     S.play += dt;
     updatePlayer(dt); if (S.mode !== 'play') return;
     updateWorld(dt, true); updateJulia(dt); updateWave(dt); updateCamera(dt);
-    if (!S.flags.sketch && S.P.x > 60*T){ S.flags.sketch = true; startScene('sketch'); }
+    if (!S.flags.sketch && S.P.x > 60*T && S.P.onGround){ S.flags.sketch = true; startScene('sketch'); }
     if (S.flags.escape && S.W.door && S.P.x + S.P.w > S.W.door.x + 20 && S.P.onGround){ S.flags.escape = false; S.wave = null; Object.assign(S.J, {gone:false, state:'idle', x:S.W.door.x + 96, y:FLOOR*T, face:-1}); S.P.vx = 0; startScene('ending'); }
     return;
   }
@@ -1642,7 +1660,7 @@ function tgInit(){
   if (u && u.first_name){ $('hello').textContent = `Привет, ${u.first_name}! Твой прогресс хранится в Telegram.`; $('hello').hidden = false; }
   $('fsbtn').style.display = 'none'; $('fsHint').style.display = 'none';
   try { ['viewportChanged','fullscreenChanged','safeAreaChanged','contentSafeAreaChanged'].forEach(ev => tg.onEvent(ev, fitStage)); } catch(e){}
-  fitStage(); cloudMerge(); setInterval(tgSync, 250);
+  tgFullscreen(); fitStage(); cloudMerge(); setInterval(tgSync, 250);
   return true;
 }
 /* ================= Раскладка под экран телефона ================= */
@@ -1651,8 +1669,11 @@ function fitInsets(){
   const a = TG.app.safeAreaInset || z, b = TG.app.contentSafeAreaInset || z;
   return {top:(a.top||0) + (b.top||0), bottom:(a.bottom||0) + (b.bottom||0), left:(a.left||0) + (b.left||0), right:(a.right||0) + (b.right||0)};
 }
+let fitKey = '';
 function fitStage(){
   const b = document.body, touch = touchMode || TG.on;
+  const key = [touch, innerWidth, innerHeight, JSON.stringify(fitInsets())].join('|');
+  if (key === fitKey) return; fitKey = key;
   b.classList.toggle('fit', touch);
   const app = document.querySelector('.app'), st = $('stage');
   if (!touch){ b.classList.remove('rot'); app.removeAttribute('style'); st.removeAttribute('style'); return; }
@@ -1662,7 +1683,21 @@ function fitStage(){
   const aw = rot ? H : W, ah = rot ? W : H, w = Math.floor(Math.min(aw, ah * 16 / 9));
   st.style.width = w + 'px'; st.style.height = Math.floor(w * 9 / 16) + 'px';
 }
-addEventListener('resize', fitStage); addEventListener('orientationchange', () => setTimeout(fitStage, 200));
+// Поворот телефона: слушаем все события, которые бывают в разных браузерах/Telegram,
+// а на случай, если ни одно не пришло, fitStage ещё проверяется каждый кадр (uiTick).
+addEventListener('resize', fitStage); addEventListener('orientationchange', fitStage);
+try { matchMedia('(orientation: portrait)').addEventListener('change', fitStage); } catch(e){}
+try { screen.orientation.addEventListener('change', fitStage); } catch(e){}
+try { visualViewport.addEventListener('resize', fitStage); } catch(e){}
+// Стрелки управления видны только во время самой игры (не в меню, паузе, диалогах и журнале)
+let wasPlaying = false;
+function uiTick(){
+  fitStage();
+  const playing = !!(S && S.mode === 'play' && !G1.paused && !journalOpen && SCREENS.every(id => $(id).hidden));
+  if (playing === wasPlaying) return; wasPlaying = playing;
+  $('stage').classList.toggle('playing', playing);
+  if (!playing){ for (const k in keys) keys[k] = false; for (const k in touch) touch[k] = false; document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on')); }
+}
 function tgBoot(){
   if (!tgInit()){ const s = document.getElementById('tgsdk'); if (s) s.addEventListener('load', tgInit); }
   fitStage();
@@ -2039,7 +2074,7 @@ let lastTs = 0, acc = 0;
 function frame(ts){
   let dt = (ts - lastTs)/1000 || 0; lastTs = ts; dt = Math.min(dt, .1);
   if (!G1.paused){ acc += dt; let n = 0; while (acc >= STEP && n < 20){ update(STEP); acc -= STEP; n++; } if (n >= 20) acc = 0; }
-  musicTick(); render();
+  musicTick(); render(); uiTick();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
