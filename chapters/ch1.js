@@ -10,7 +10,7 @@ const CHASE = {
 };
 chapter({
   id:'ch1', label:'Глава 1', kicker:'ГЛАВА 1', title:'Нижний квартал', sub:'Кто гасит свет',
-  theme:'street', music:'calm', cols:330, rows:22, lampsStartOut:true, find:'letter', startScene:'start', exitScene:'gates',
+  theme:'street', music:'quarter', cols:330, rows:22, lampsStartOut:true, find:'letter', startScene:'start', exitScene:'gates',
   endSub:'Огниво снова у Аи. А вопросов стало только больше.',
   endNote:'<b>Табличка у старых ворот</b><br>Знак мастерской Тимофея — фонарь в круге. Царапины свежие, медь ещё блестит.',
   build(h){
@@ -67,7 +67,7 @@ chapter({
   restore(){
     if (S.flags.escape){ api.hide('julia'); api.mist({back:520}); api.openExit(); }
     else if (S.flags.t_steal){ api.chase(CHASE); S.chase.reset(); setMusic(true, 'chase'); }
-    else setMusic(true, 'calm');
+    else setMusic(true, 'quarter');
   },
   scenes:{
     start:{ title:'Темно', lines:[

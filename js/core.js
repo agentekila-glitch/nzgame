@@ -139,32 +139,151 @@ const sfx = {
   gear(){ noise(.04, .03, 3200, 4); },
   faint(){ [440,392,349,294].forEach((f,i) => tone(f, .35, 'sine', .05, null, i*.14)); }
 };
-// Генеративная музыкальная шкатулка
+/* ================= Музыка =================
+   Генеративная: у каждого трека своя гармония, инструменты и ритм, а мелодия
+   собирается на ходу из коротких фраз — поэтому одно и то же место не звучит дважды одинаково.
+   Форма трека: секции по 8 тактов. A — основная, B — другая гармония, C — затишье (без мелодии и ударных). */
 const BPM = 84, BEAT = 60/BPM;
-const SCALE = [220, 246.94, 261.63, 293.66, 329.63, 392, 440, 493.88, 523.25, 587.33, 659.25];
-let musicOn = false, nextBeat = 0, beatIdx = 0, musicMood = 'calm';
-const PATTERNS = {
-  calm:  [0,4,7,4, 2,5,8,5, 0,4,9,7, 3,5,8,6],
-  chase: [0,4,7,4, 2,5,8,5, 0,4,9,7, 3,5,8,6],
-  escape:[0,3,5,3, 1,4,6,4, 0,3,7,5, 2,4,6,5],
-  clock: [0,7,4,7, 2,7,5,7, 0,7,4,9, 3,7,5,8],
-  sky:   [4,7,9,7, 5,8,10,8, 4,7,9,6, 3,6,8,7],
-  sad:   [0,2,4,2, 1,3,5,3, 0,2,6,4, 1,3,4,2]
+let musicOn = false, musicMood = 'calm';
+const MODES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], lydian:[0,2,4,6,7,9,11],
+  penta:[0,2,4,7,9], hminor:[0,2,3,5,7,8,11], phryg:[0,1,3,5,7,8,10] };
+// Узоры: один символ — одна шестнадцатая. Цифра — тон аккорда (0 основной, 1 терция, 2 квинта, 3 септима, 4+ — то же октавой выше).
+// Ударные: k бочка, s малый, h хэт, b щётка, t тиканье.  Мелодия: x — нота, - — тянуть, . — пауза.
+const TRACKS = {
+  // Главное меню: музыкальная шкатулка в три четверти
+  title:{ bpm:70, meter:12, root:55, mode:'major', prog:[0,5,3,4], progB:[5,3,0,4], form:'AABC',
+    pad:{w:'sine', v:.011, lp:900},
+    bass:{pat:'0.....2.....', w:'sine', v:.045, len:5},
+    arp:{pat:'0.1.2.4.2.1.', w:'triangle', v:.011, len:2.5},
+    lead:{w:'sine', v:.022, lo:7, hi:14, rh:['x-----x---x-', 'x---x---x---', 'x-x-x-----..', '......x-x-x-']} },
+  // Пролог: тёплый вечер, гармошка где-то во дворе
+  calm:{ bpm:80, root:55, mode:'major', prog:[0,4,5,3], progB:[3,4,2,5], form:'AABAC', swing:.12,
+    pad:{w:'triangle', v:.009, lp:1100},
+    bass:{pat:'0.......2...4...', w:'triangle', v:.05, lp:500, len:3},
+    arp:{pat:'..1...2...1...4.', w:'sine', v:.012, len:2},
+    lead:{w:'sawtooth', v:.009, lp:1400, det:9, lo:7, hi:14, rh:['x--.x-x-x---x...', 'x---..x-x-x-x---', 'x.x.x---x--.....', 'x-x-x-x-x-------']},
+    perc:'....b.......b...' },
+  // Глава 1: Нижний квартал — ночной джаз подворотен
+  quarter:{ bpm:92, root:50, mode:'dorian', prog:[0,3,0,3,6,3,4,0], progB:[2,3,6,0], form:'AABA', swing:.16,
+    pad:{w:'square', v:.005, lp:700},
+    bass:{pat:'0...1...2...3...', w:'triangle', v:.055, lp:700, len:3.5},
+    lead:{w:'square', v:.011, lp:1800, det:6, lo:7, hi:15, rh:['x.x...x-x...x-..', '..x-x.x...x-x---', 'x---x-..x.x.x---', 'x-x.....x-x-x...']},
+    perc:'k...b.h.k.k.b.h.' },
+  // Погоня за Жулей
+  chase:{ bpm:132, root:52, mode:'minor', prog:[0,5,6,0,0,5,3,4], progB:[3,5,6,4], form:'AABA',
+    bass:{pat:'0.0.0.00.0.0.40.', w:'sawtooth', v:.034, lp:500, len:1},
+    arp:{pat:'0124012401240124', w:'square', v:.007, lp:2400, len:.8},
+    lead:{w:'sawtooth', v:.011, lp:2000, lo:7, hi:14, rh:['x-x-x-x-x---x-x-', 'x---x---x-x-x---', 'x.x.x.x.x-x-x-..']},
+    perc:'k.h.s.h.k.k.s.hh' },
+  // Поднимается Мгла — тревожный пульс
+  escape:{ bpm:120, root:57, mode:'phryg', prog:[0,1,0,6], progB:[5,1,0,0], form:'AAB',
+    pad:{w:'sawtooth', v:.007, lp:600},
+    bass:{pat:'0..0..0.0..0..0.', w:'sawtooth', v:.045, lp:320, len:1.5},
+    arp:{pat:'0.1.2.1.0.1.4.1.', w:'square', v:.006, lp:1600, len:1},
+    lead:{w:'sine', v:.017, lo:7, hi:12, rh:['x-------x-------', 'x---x---x-------', '........x---x---']},
+    perc:'k..k..k.k..k..s.' },
+  // Глава 2: Часовая башня — пиццикато и тиканье
+  clock:{ bpm:100, root:53, mode:'dorian', prog:[0,3,0,6], progB:[2,6,3,4], form:'AABAC',
+    pad:{w:'triangle', v:.006, lp:900},
+    bass:{pat:'0...2...0...2...', w:'triangle', v:.05, lp:600, len:1.5},
+    arp:{pat:'0.2.1.2.0.2.1.4.', w:'triangle', v:.016, lp:3000, len:.5},
+    lead:{w:'triangle', v:.014, lo:7, hi:14, rh:['x-..x-..x-x-x---', 'x.x.x-..x.x.x---', 'x---x---x-x-x-x-']},
+    perc:'t...b...t...b...' },
+  // Глава 3: над облаками — воздух и колокольчики
+  sky:{ bpm:70, root:55, mode:'penta', prog:[0,3,1,2], progB:[2,3,0,0], form:'AABC',
+    pad:{w:'sine', v:.012, lp:1500},
+    bass:{pat:'0...............', w:'sine', v:.045, len:14},
+    arp:{pat:'0..1..2..4..2...', w:'sine', v:.012, len:4},
+    lead:{w:'sine', v:.02, lo:5, hi:12, rh:['x-----x---x-----', 'x---x---x-------', '........x---x---']} },
+  // Грустные сцены: фортепиано под дождём
+  sad:{ bpm:62, root:57, mode:'hminor', prog:[0,5,3,4], progB:[3,0,5,4], form:'AB',
+    pad:{w:'sine', v:.008, lp:800},
+    bass:{pat:'0.......4.......', w:'sine', v:.04, len:7},
+    arp:{pat:'0...1...2...1...', w:'triangle', v:.016, lp:1800, len:3},
+    lead:{w:'sine', v:.02, lo:7, hi:14, rh:['x-----x-x-------', 'x---x---x-----..', '....x---x---x---']} },
+  // Большой фонарь зажжён и финал
+  hope:{ bpm:84, root:53, mode:'lydian', prog:[0,1,5,4], progB:[5,4,1,0], form:'AABA',
+    pad:{w:'triangle', v:.01, lp:1400},
+    bass:{pat:'0.......0...2...', w:'triangle', v:.05, lp:600, len:3},
+    arp:{pat:'0.1.2.4.2.4.6.4.', w:'triangle', v:.011, len:1.5},
+    lead:{w:'triangle', v:.02, lo:7, hi:15, rh:['x---x-x-x-------', 'x-x-x---x---x---', 'x-----x-x-x-x---']},
+    perc:'....b.......b...' }
 };
+const M = {name:'', step:0, next:0, phrase:null};
+let mBus = null;
+function musicBus(){
+  if (mBus) return mBus;
+  // Эхо на музыкальной шине — даёт «воздух» и глубину
+  const dry = AC.createGain(), del = AC.createDelay(1), fb = AC.createGain(), wet = AC.createGain(), lp = AC.createBiquadFilter();
+  del.delayTime.value = .36; fb.gain.value = .3; wet.gain.value = .26; lp.type = 'lowpass'; lp.frequency.value = 2400;
+  dry.connect(musicGain); dry.connect(del); del.connect(lp); lp.connect(fb); fb.connect(del); lp.connect(wet); wet.connect(musicGain);
+  return mBus = {dry, del};
+}
+function mrng(a){ return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function mfreq(tr, d){ const m = MODES[tr.mode], L = m.length, o = Math.floor(d / L), i = ((d % L) + L) % L; return 440 * Math.pow(2, (tr.root + m[i] + 12*o - 69)/12); }
+function mSection(tr, bar){ return tr.form[Math.floor(bar/8) % tr.form.length]; }
+function mChord(tr, bar){ const p = mSection(tr, bar) === 'B' && tr.progB ? tr.progB : tr.prog; return p[bar % p.length]; }
+function mTone(tr, ch, k){ return ch + [0,2,4,6][k % 4] + Math.floor(k/4)*MODES[tr.mode].length; }
+function mVoice(f, t0, d, o){
+  const osc = AC.createOscillator(), g = AC.createGain(), a = Math.min(o.a || .008, d*.5), v = (o.v || .03) * (.88 + Math.random()*.24);
+  osc.type = o.w || 'sine'; osc.frequency.setValueAtTime(f, t0); if (o.det) osc.detune.value = o.det; if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + d);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(v, t0 + a);
+  if (o.sus){ g.gain.setValueAtTime(v, t0 + Math.max(a, d*.6)); g.gain.linearRampToValueAtTime(.0001, t0 + d); }
+  else g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+  let node = osc; if (o.lp){ const fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = o.lp; osc.connect(fl); node = fl; }
+  node.connect(g); g.connect(musicBus().dry); osc.start(t0); osc.stop(t0 + d + .05);
+}
+function mPerc(kind, t0){
+  if (kind === 'k'){ mVoice(110, t0, .26, {w:'sine', v:.08, a:.003, to:42}); return; }
+  const P = {h:['highpass',7000,.05,.016], s:['bandpass',1800,.16,.035], t:['bandpass',3800,.03,.03], b:['bandpass',2500,.1,.015]}[kind]; if (!P) return;
+  const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; f.type = P[0]; f.frequency.value = P[1]; g.gain.setValueAtTime(P[3]*(.8 + Math.random()*.4), t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + P[2]);
+  s.connect(f); f.connect(g); g.connect(musicBus().dry); s.start(t0, Math.random()*.3); s.stop(t0 + P[2] + .02);
+}
+// Фраза мелодии на 2 такта. 4 разные фразы чередуются, через 32 такта набор фраз меняется.
+function mPhrase(tr, bar){
+  const p0 = bar - bar % 2, key = M.name + ':' + p0;
+  if (M.phrase && M.phrase.key === key) return M.phrase.notes;
+  const L = tr.meter || 16, Lm = MODES[tr.mode].length, ld = tr.lead, notes = {};
+  const R = mrng((Math.floor(p0/2) % 4) * 7919 + Math.floor(p0/32) * 104729 + tr.bpm * 31 + 1);
+  let p = Math.round((ld.lo + ld.hi)/2);
+  for (let b = 0; b < 2; b++){
+    const rh = ld.rh[Math.floor(R()*ld.rh.length)], ch = mChord(tr, p0 + b);
+    for (let i = 0; i < L; i++){
+      if (rh[i] !== 'x') continue;
+      if (i % 4 === 0){ let best = p, bd = 99; // на сильной доле — тон аккорда, ближайший к прошлой ноте
+        for (let o = -2; o <= 3; o++) for (const k of [0,2,4]){ const q = ch + k + o*Lm; if (q >= ld.lo && q <= ld.hi && Math.abs(q - p) < bd){ bd = Math.abs(q - p); best = q; } }
+        p = best; }
+      else p = clamp(p + [-2,-1,-1,1,1,2][Math.floor(R()*6)], ld.lo, ld.hi);
+      let len = 1; while (i + len < L && rh[i + len] === '-') len++;
+      notes[b*L + i] = [p, len];
+    }
+  }
+  M.phrase = {key, notes}; return notes;
+}
+function mStep(tr, n, t, sd){
+  const L = tr.meter || 16, bar = Math.floor(n / L), i = n % L, sec = mSection(tr, bar), ch = mChord(tr, bar), Lm = MODES[tr.mode].length;
+  if (i === 0 && tr.pad) for (let k = 0; k < 3; k++)
+    mVoice(mfreq(tr, ch + k*2), t, L*sd*1.08, {w:tr.pad.w, v:tr.pad.v, a:L*sd*.35, sus:1, lp:tr.pad.lp, det:(k - 1)*7});
+  const bz = tr.bass, bc = bz && bz.pat[i];
+  if (bc && bc !== '.') mVoice(mfreq(tr, mTone(tr, ch, +bc) - Lm), t, sd*(bz.len || 2), {w:bz.w, v:bz.v, lp:bz.lp});
+  const ar = tr.arp, ac = ar && ar.pat[i];
+  if (ac && ac !== '.') mVoice(mfreq(tr, mTone(tr, ch, +ac) + Lm), t, sd*(ar.len || 1.5), {w:ar.w, v:ar.v, lp:ar.lp});
+  if (sec === 'C' || bar < 2) return; // затишье и вступление трека — без мелодии и ударных
+  if (tr.perc){ const pc = tr.perc[i]; if (pc !== '.') mPerc(pc, t); }
+  if (tr.lead){ const nt = mPhrase(tr, bar)[(bar % 2)*L + i];
+    if (nt){ const f = mfreq(tr, nt[0]), d = sd*nt[1]*1.1 + .08, o = {w:tr.lead.w, v:tr.lead.v, lp:tr.lead.lp, a:.02};
+      if (tr.lead.det){ mVoice(f, t, d, {...o, det:-tr.lead.det}); mVoice(f, t, d, {...o, det:tr.lead.det}); } else mVoice(f, t, d, o); } }
+}
 function musicTick(){
   if (!musicOn || !AC || muted) return;
-  const now = AC.currentTime, pat = PATTERNS[musicMood] || PATTERNS.calm;
-  if (nextBeat < now) nextBeat = now + .05;
-  while (nextBeat < now + .2){
-    const i = beatIdx % 16, tense = musicMood === 'chase' || musicMood === 'escape';
-    const n = SCALE[pat[i] + (tense && i % 4 === 3 ? 1 : 0)];
-    const d = nextBeat - now;
-    tone(n*2, .9, 'sine', .028, null, d, musicGain); tone(n*4, .4, 'triangle', .008, null, d, musicGain);
-    if (i % 4 === 0) tone(SCALE[pat[i]]/2, 2.4, 'sine', .03, null, d, musicGain);
-    if ((tense && i % 2 === 1) || (musicMood === 'clock' && i % 2 === 0)){ const t0 = AC.currentTime + d; const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
-      s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = musicMood === 'clock' ? 4200 : 6000; g.gain.setValueAtTime(.022, t0); g.gain.exponentialRampToValueAtTime(.0001, t0+.05);
-      s.connect(f).connect(g).connect(musicGain); s.start(t0); s.stop(t0+.06); }
-    nextBeat += BEAT * (tense ? .5 : musicMood === 'sad' ? 1.4 : 1); beatIdx++;
+  const tr = TRACKS[musicMood] || TRACKS.calm, now = AC.currentTime, sd = 60/tr.bpm/4;
+  if (M.name !== musicMood){ M.name = musicMood; M.step = 0; M.phrase = null; M.next = Math.max(M.next, now + .05);
+    musicBus().del.delayTime.setValueAtTime(sd*3, now); }
+  if (M.next < now) M.next = now + .05;
+  while (M.next < now + .25){
+    mStep(tr, M.step, M.next, sd);
+    M.next += tr.swing ? sd*(M.step % 2 ? 1 - tr.swing : 1 + tr.swing) : sd; M.step++;
   }
 }
 function setMusic(on, mood){ musicOn = on; if (mood) musicMood = mood; const ac = audio(); if (!ac) return;

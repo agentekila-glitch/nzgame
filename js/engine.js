@@ -144,7 +144,7 @@ function respawn(){
   const p = S.P; p.x = p.checkpoint.x; p.y = p.checkpoint.y; p.vx = 0; p.vy = 0; p.inv = 1.2; p.mover = null; S.hp = 3; S.mode = 'play';
   if (S.wave) S.wave.x = Math.min(S.wave.x, p.x - 460);
   if (S.chase && S.chase.reset) S.chase.reset();
-  S.cam.x = clamp(p.x - VW*.4, 0, S.W.w - VW); S.cam.y = clamp(p.y - VH*.6, 0, S.W.h - VH);
+  S.cam.x = clamp(p.x - VW*.4, 0, S.W.w - VW); S.cam.y = clamp(p.y - VH*.6, 0, S.W.h - VH); S.cam.vx = S.cam.vy = S.cam.look = 0;
 }
 function fallOut(){ const p = S.P; S.hp--; sfx.hurt(); buzz(40); S.flash = .2;
   if (S.hp <= 0){ faint(); return; }
@@ -417,13 +417,33 @@ function updateScene(dt){
 }
 
 /* ================= Главный апдейт ================= */
+// Плавное догоняющее движение (как SmoothDamp в Unity): без рывков при старте и остановке.
+function smoothDamp(cur, target, vel, time, dt){
+  const o = 2/time, x = o*dt, k = 1/(1 + x + .48*x*x + .235*x*x*x), ch = cur - target;
+  const tmp = (vel + o*ch)*dt, v = (vel - o*tmp)*k;
+  return [target + (ch + tmp)*k, v];
+}
 function updateCamera(dt){
   const p = S.P, c = S.cam, f = S.camFocus;
-  const tx = f ? f.x - VW/2 : p.x + p.w/2 - VW*.42 + p.face*70 + p.vx*.12;
-  c.x += (tx - c.x) * Math.min(1, dt*(f ? 3 : 7));
-  const ty = f ? f.y - VH*.6 : p.y + p.h - VH*.62; const dy = ty - c.y;
-  if (f) c.y += dy * Math.min(1, dt*3); else if (Math.abs(dy) > 40) c.y += (dy - Math.sign(dy)*40) * Math.min(1, dt*5);
-  c.x = clamp(c.x, 0, S.W.w - VW); c.y = clamp(c.y, 0, S.W.h - VH);
+  if (c.look === undefined){ c.look = 0; c.vx = 0; c.vy = 0; }
+  let tx, ty;
+  if (f){ tx = f.x - VW/2; ty = f.y - VH*.6; }
+  else {
+    // Взгляд вперёд растёт только при устойчивом беге и меняется медленно — короткие нажатия A/D камеру не дёргают.
+    const run = Math.abs(p.vx) > 120 ? Math.sign(p.vx) : 0;
+    if (run) c.look = approach(c.look, run*VW*.08, dt*VW*.2);
+    // Мёртвая зона по X: пока героиня внутри рамки, камера стоит.
+    const px = p.x + p.w/2, center = c.x + VW*.45 + c.look, dz = VW*.02;
+    tx = px > center + dz ? c.x + (px - center - dz) : px < center - dz ? c.x + (px - center + dz) : c.x;
+    // По Y: мёртвая зона, а если героиня стоит на земле — подтягиваем к её уровню.
+    const py = p.y + p.h, cy = c.y + VH*.62, dzy = p.onGround ? 6 : 50;
+    ty = py > cy + dzy ? c.y + (py - cy - dzy) : py < cy - dzy ? c.y + (py - cy + dzy) : c.y;
+  }
+  let r = smoothDamp(c.x, tx, c.vx, f ? .45 : .09, dt); c.x = r[0]; c.vx = r[1];
+  r = smoothDamp(c.y, ty, c.vy, f ? .45 : (p.vy > 600 ? .06 : .14), dt); c.y = r[0]; c.vy = r[1];
+  const mx = Math.max(0, S.W.w - VW), my = Math.max(0, S.W.h - VH);
+  if (c.x < 0 || c.x > mx){ c.x = clamp(c.x, 0, mx); c.vx = 0; }
+  if (c.y < 0 || c.y > my){ c.y = clamp(c.y, 0, my); c.vy = 0; }
   c.kvy += (-c.ky*240 - c.kvy*18) * dt; c.ky += c.kvy*dt; c.kx *= Math.pow(.001, dt);
 }
 function checkTriggers(){
@@ -497,7 +517,7 @@ function loadGame(){
   S.play = d.play || 0; S.faints = d.faints || 0; S.flags = d.flags || {};
   for (const tg of W.trigs) if (S.flags['t_' + tg.scene]) tg.done = true;
   const ch = curCh(); if (ch.restore) ch.restore(); else setMusic(true, ch.music || 'calm');
-  S.cam.x = clamp(p.x - VW*.4, 0, W.w - VW); S.cam.y = clamp(p.y - VH*.6, 0, W.h - VH);
+  S.cam.x = clamp(p.x - VW*.4, 0, W.w - VW); S.cam.y = clamp(p.y - VH*.6, 0, W.h - VH); S.cam.vx = S.cam.vy = S.cam.look = 0;
   S.mode = 'play'; S.fadeIn = .8; toast('Продолжаем у фонаря');
   return true;
 }
@@ -523,7 +543,7 @@ function chapterComplete(){
   if (next < CHAPTERS.length){ unlock(next); store.set(SKEY, JSON.stringify({v:2, ch:next, lamp:0, lit:[], finds:[], drops:[], flags:{fresh:1}, play:0, faints:0, t:Date.now()})); }
   else store.set(SKEY, 'null');
   if (ch.noStats){ setTimeout(() => startChapter(next), 400); return; }
-  setMusic(true, 'calm');
+  setMusic(true, S.ch >= CHAPTERS.length - 1 ? 'hope' : 'title');
   setTimeout(showEnd, 700);
 }
 // Короткий доступ для сцен в главах

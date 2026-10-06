@@ -21,7 +21,7 @@ function showMenu(){
   $('mContinue').hidden = !d;
   if (d){ const ch = CHAPTERS[d.ch]; $('mContInfo').textContent = `${ch.label}. ${ch.title}${d.play ? ' · ' + Math.max(1, Math.round(d.play/60)) + ' мин' : ''}`; }
   $('mChapters').hidden = prog.unlocked < 1;
-  setMusic(true, 'calm');
+  setMusic(true, 'title');
 }
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }
 function closePause(){ hideScreens(); G1.paused = false; jumpQueued = false; advanceQueued = false; }
