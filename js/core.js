@@ -3,7 +3,7 @@
    Город гаснущих фонарей — ядро: утилиты, настройки, ввод, звук.
    Все файлы игры — обычные <script>, общие переменные видны между ними.
    ===================================================================== */
-const VERSION = 'Бета 0.2';
+const VERSION = 'Бета 0.2.4';
 const $ = id => document.getElementById(id);
 const T = 32; let VW = 960, VH = 540;     // VW/VH подстраиваются под экран телефона в fitStage()
 let HUD = {t:0, r:0, b:0, l:0};          // отступы HUD от кнопок Telegram/выреза, в единицах кадра
@@ -141,73 +141,76 @@ const sfx = {
 };
 /* ================= Музыка =================
    Генеративная: у каждого трека своя гармония, инструменты и ритм, а мелодия
-   собирается на ходу из коротких фраз — поэтому одно и то же место не звучит дважды одинаково.
+   собирается на ходу вокруг узнаваемой темы трека — поэтому одно и то же место не звучит дважды одинаково.
    Форма трека: секции по 8 тактов. A — основная, B — другая гармония, C — затишье (без мелодии и ударных). */
 const BPM = 84, BEAT = 60/BPM;
 let musicOn = false, musicMood = 'calm';
 const MODES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], lydian:[0,2,4,6,7,9,11],
   penta:[0,2,4,7,9], hminor:[0,2,3,5,7,8,11], phryg:[0,1,3,5,7,8,10] };
 // Узоры: один символ — одна шестнадцатая. Цифра — тон аккорда (0 основной, 1 терция, 2 квинта, 3 септима, 4+ — то же октавой выше).
-// Ударные: k бочка, s малый, h хэт, b щётка, t тиканье.  Мелодия: x — нота, - — тянуть, . — пауза.
+// Ударные: k бочка, s малый, h хэт, b щётка, t тиканье.  Ритм мелодии: x — нота, - — тянуть, . — пауза.
+// theme — узнаваемая мелодия трека на 2 такта (ступени лада: 0-9, a=10 … f=15), звучит в начале каждой секции A.
+// bell — у мелодии призвук колокольчика, oct — сдвиг аккомпанемента на октавы.
 const TRACKS = {
-  // Главное меню: музыкальная шкатулка в три четверти
-  title:{ bpm:70, meter:12, root:55, mode:'major', prog:[0,5,3,4], progB:[5,3,0,4], form:'AABC',
-    pad:{w:'sine', v:.011, lp:900},
-    bass:{pat:'0.....2.....', w:'sine', v:.045, len:5},
-    arp:{pat:'0.1.2.4.2.1.', w:'triangle', v:.011, len:2.5},
-    lead:{w:'sine', v:.022, lo:7, hi:14, rh:['x-----x---x-', 'x---x---x---', 'x-x-x-----..', '......x-x-x-']} },
-  // Пролог: тёплый вечер, гармошка где-то во дворе
-  calm:{ bpm:80, root:55, mode:'major', prog:[0,4,5,3], progB:[3,4,2,5], form:'AABAC', swing:.12,
-    pad:{w:'triangle', v:.009, lp:1100},
-    bass:{pat:'0.......2...4...', w:'triangle', v:.05, lp:500, len:3},
-    arp:{pat:'..1...2...1...4.', w:'sine', v:.012, len:2},
-    lead:{w:'sawtooth', v:.009, lp:1400, det:9, lo:7, hi:14, rh:['x--.x-x-x---x...', 'x---..x-x-x-x---', 'x.x.x---x--.....', 'x-x-x-x-x-------']},
-    perc:'....b.......b...' },
+  // Главное меню: музыкальная шкатулка, вальс
+  title:{ bpm:66, meter:12, root:55, mode:'major', prog:[0,5,3,4], progB:[5,3,0,4], form:'AABC',
+    pad:{w:'sine', v:.008, lp:900},
+    bass:{pat:'0.....2.....', w:'sine', v:.04, len:5},
+    arp:{pat:'..1.2...1.2.', w:'sine', v:.014, len:2, oct:2, bell:1},
+    lead:{w:'sine', v:.032, bell:1, lo:9, hi:16, theme:'b-9-7-b-c-b-e---c---b---', rh:['x-----x---x-', 'x---x---x---', 'x-x-x-----..', '......x-x-x-']} },
+  // Пролог: тёплый вечер во дворе — гармошка и гитара
+  calm:{ bpm:88, root:55, mode:'major', prog:[0,4,5,3], progB:[3,4,2,5], form:'AABAC', swing:.14,
+    pad:{w:'triangle', v:.007, lp:1100},
+    bass:{pat:'0.....2.0...2...', w:'triangle', v:.05, lp:600, len:2},
+    arp:{pat:'..12..12..12..12', w:'triangle', v:.013, lp:2400, len:1},
+    lead:{w:'sawtooth', v:.014, lp:1500, det:10, lo:7, hi:14, theme:'7-9-b---b-c-b-9-8---d-c-b-------', rh:['x--.x-x-x---x...', 'x---..x-x-x-x---', 'x.x.x---x--.....', 'x-x-x-x-x-------']},
+    perc:'....b.......b..b' },
   // Глава 1: Нижний квартал — ночной джаз подворотен
-  quarter:{ bpm:92, root:50, mode:'dorian', prog:[0,3,0,3,6,3,4,0], progB:[2,3,6,0], form:'AABA', swing:.16,
-    pad:{w:'square', v:.005, lp:700},
-    bass:{pat:'0...1...2...3...', w:'triangle', v:.055, lp:700, len:3.5},
-    lead:{w:'square', v:.011, lp:1800, det:6, lo:7, hi:15, rh:['x.x...x-x...x-..', '..x-x.x...x-x---', 'x---x-..x.x.x---', 'x-x.....x-x-x...']},
-    perc:'k...b.h.k.k.b.h.' },
+  quarter:{ bpm:100, root:50, mode:'dorian', prog:[0,3,0,3,6,3,4,0], progB:[2,3,6,0], form:'AABA', swing:.2,
+    pad:{w:'square', v:.004, lp:800},
+    bass:{pat:'0...1...2...3...', w:'triangle', v:.06, lp:900, len:3.5},
+    arp:{pat:'....12......12..', w:'square', v:.007, lp:1400, len:1.2},
+    lead:{w:'square', v:.016, lp:2200, det:7, lo:7, hi:15, theme:'b.b.a-9-7-----b.c.b.a---e-d-c---', rh:['x.x...x-x...x-..', '..x-x.x...x-x---', 'x---x-..x.x.x---', 'x-x.....x-x-x...']},
+    perc:'k.h.b.hhk.h.b.h.' },
   // Погоня за Жулей
-  chase:{ bpm:132, root:52, mode:'minor', prog:[0,5,6,0,0,5,3,4], progB:[3,5,6,4], form:'AABA',
-    bass:{pat:'0.0.0.00.0.0.40.', w:'sawtooth', v:.034, lp:500, len:1},
-    arp:{pat:'0124012401240124', w:'square', v:.007, lp:2400, len:.8},
-    lead:{w:'sawtooth', v:.011, lp:2000, lo:7, hi:14, rh:['x-x-x-x-x---x-x-', 'x---x---x-x-x---', 'x.x.x.x.x-x-x-..']},
+  chase:{ bpm:140, root:52, mode:'minor', prog:[0,5,6,0], progB:[3,5,6,4], form:'AABA',
+    bass:{pat:'0.0.0.00.0.0.40.', w:'sawtooth', v:.04, lp:700, len:1},
+    arp:{pat:'0124012401240124', w:'square', v:.009, lp:2600, len:.8},
+    lead:{w:'sawtooth', v:.016, lp:2400, lo:7, hi:14, theme:'e-b-9-b-e-b-c-b-c-a-c-e-d---b---', rh:['x-x-x-x-x---x-x-', 'x---x---x-x-x---', 'x.x.x.x.x-x-x-..']},
     perc:'k.h.s.h.k.k.s.hh' },
   // Поднимается Мгла — тревожный пульс
-  escape:{ bpm:120, root:57, mode:'phryg', prog:[0,1,0,6], progB:[5,1,0,0], form:'AAB',
-    pad:{w:'sawtooth', v:.007, lp:600},
-    bass:{pat:'0..0..0.0..0..0.', w:'sawtooth', v:.045, lp:320, len:1.5},
-    arp:{pat:'0.1.2.1.0.1.4.1.', w:'square', v:.006, lp:1600, len:1},
-    lead:{w:'sine', v:.017, lo:7, hi:12, rh:['x-------x-------', 'x---x---x-------', '........x---x---']},
+  escape:{ bpm:116, root:57, mode:'phryg', prog:[0,1,0,6], progB:[5,1,0,0], form:'AAB',
+    pad:{w:'sawtooth', v:.008, lp:700},
+    bass:{pat:'0..0..0.0..0..0.', w:'sawtooth', v:.05, lp:400, len:1.5},
+    arp:{pat:'0.1.2.1.0.1.4.1.', w:'square', v:.008, lp:1800, len:1},
+    lead:{w:'sawtooth', v:.012, lp:1200, det:14, lo:7, hi:12, theme:'7-------8-------7-------b---8---', rh:['x-------x-------', 'x---x---x-------', '........x---x---']},
     perc:'k..k..k.k..k..s.' },
   // Глава 2: Часовая башня — пиццикато и тиканье
-  clock:{ bpm:100, root:53, mode:'dorian', prog:[0,3,0,6], progB:[2,6,3,4], form:'AABAC',
-    pad:{w:'triangle', v:.006, lp:900},
-    bass:{pat:'0...2...0...2...', w:'triangle', v:.05, lp:600, len:1.5},
-    arp:{pat:'0.2.1.2.0.2.1.4.', w:'triangle', v:.016, lp:3000, len:.5},
-    lead:{w:'triangle', v:.014, lo:7, hi:14, rh:['x-..x-..x-x-x---', 'x.x.x-..x.x.x---', 'x---x---x-x-x-x-']},
-    perc:'t...b...t...b...' },
+  clock:{ bpm:108, root:53, mode:'dorian', prog:[0,3,0,6], progB:[2,6,3,4], form:'AABAC',
+    pad:{w:'triangle', v:.005, lp:900},
+    bass:{pat:'0...2...0...2...', w:'triangle', v:.055, lp:700, len:1.2},
+    arp:{pat:'0.2.1.2.0.2.1.4.', w:'triangle', v:.02, lp:3200, len:.45},
+    lead:{w:'square', v:.012, lp:2600, lo:7, hi:14, theme:'7.b.9.b.7.b.9.b.a.c.e.c.a---8---', rh:['x.x.x.x.x-x-x---', 'x.x.x-..x.x.x---', 'x---x---x-x-x-x-']},
+    perc:'t.t.b.t.t.t.b.t.' },
   // Глава 3: над облаками — воздух и колокольчики
-  sky:{ bpm:70, root:55, mode:'penta', prog:[0,3,1,2], progB:[2,3,0,0], form:'AABC',
-    pad:{w:'sine', v:.012, lp:1500},
-    bass:{pat:'0...............', w:'sine', v:.045, len:14},
-    arp:{pat:'0..1..2..4..2...', w:'sine', v:.012, len:4},
-    lead:{w:'sine', v:.02, lo:5, hi:12, rh:['x-----x---x-----', 'x---x---x-------', '........x---x---']} },
+  sky:{ bpm:72, root:55, mode:'penta', prog:[0,3,1,2], progB:[2,3,0,0], form:'AABC',
+    pad:{w:'sine', v:.011, lp:1600},
+    bass:{pat:'0...............', w:'sine', v:.04, len:14},
+    arp:{pat:'0..1..2..4..2...', w:'sine', v:.015, len:4, oct:2, bell:1},
+    lead:{w:'sine', v:.03, bell:1, lo:5, hi:12, theme:'8-----9---a-----9-----8---7-----', rh:['x-----x---x-----', 'x---x---x-------', '........x---x---']} },
   // Грустные сцены: фортепиано под дождём
-  sad:{ bpm:62, root:57, mode:'hminor', prog:[0,5,3,4], progB:[3,0,5,4], form:'AB',
-    pad:{w:'sine', v:.008, lp:800},
+  sad:{ bpm:60, root:57, mode:'hminor', prog:[0,5,3,4], progB:[3,0,5,4], form:'AB',
+    pad:{w:'sine', v:.007, lp:800},
     bass:{pat:'0.......4.......', w:'sine', v:.04, len:7},
-    arp:{pat:'0...1...2...1...', w:'triangle', v:.016, lp:1800, len:3},
-    lead:{w:'sine', v:.02, lo:7, hi:14, rh:['x-----x-x-------', 'x---x---x-----..', '....x---x---x---']} },
+    arp:{pat:'0...1...2...1...', w:'triangle', v:.018, lp:1800, len:3},
+    lead:{w:'triangle', v:.03, lp:2000, lo:7, hi:14, theme:'e-----c-b-9-----c-----b---a-9---', rh:['x-----x-x-------', 'x---x---x-----..', '....x---x---x---']} },
   // Большой фонарь зажжён и финал
-  hope:{ bpm:84, root:53, mode:'lydian', prog:[0,1,5,4], progB:[5,4,1,0], form:'AABA',
-    pad:{w:'triangle', v:.01, lp:1400},
-    bass:{pat:'0.......0...2...', w:'triangle', v:.05, lp:600, len:3},
-    arp:{pat:'0.1.2.4.2.4.6.4.', w:'triangle', v:.011, len:1.5},
-    lead:{w:'triangle', v:.02, lo:7, hi:15, rh:['x---x-x-x-------', 'x-x-x---x---x---', 'x-----x-x-x-x---']},
-    perc:'....b.......b...' }
+  hope:{ bpm:92, root:53, mode:'lydian', prog:[0,1,5,4], progB:[5,4,1,0], form:'AABA',
+    pad:{w:'triangle', v:.01, lp:1500},
+    bass:{pat:'0.......0...2...', w:'triangle', v:.055, lp:700, len:3},
+    arp:{pat:'0.1.2.4.2.4.6.4.', w:'triangle', v:.013, len:1.5},
+    lead:{w:'triangle', v:.03, bell:1, lo:7, hi:15, theme:'7-9-b---e---d-b-c-----a-8-------', rh:['x---x-x-x-------', 'x-x-x---x---x---', 'x-----x-x-x-x---']},
+    perc:'k...b.......b...' }
 };
 const M = {name:'', step:0, next:0, phrase:null};
 let mBus = null;
@@ -245,6 +248,11 @@ function mPhrase(tr, bar){
   const p0 = bar - bar % 2, key = M.name + ':' + p0;
   if (M.phrase && M.phrase.key === key) return M.phrase.notes;
   const L = tr.meter || 16, Lm = MODES[tr.mode].length, ld = tr.lead, notes = {};
+  if (ld.theme && p0 % 8 === 0 && mSection(tr, p0) === 'A'){ // узнаваемая тема трека
+    for (let i = 0; i < ld.theme.length; i++){ const c = ld.theme[i]; if (c === '-' || c === '.') continue;
+      let len = 1; while (i + len < ld.theme.length && ld.theme[i + len] === '-') len++; notes[i] = [parseInt(c, 16), len]; }
+    M.phrase = {key, notes}; return notes;
+  }
   const R = mrng((Math.floor(p0/2) % 4) * 7919 + Math.floor(p0/32) * 104729 + tr.bpm * 31 + 1);
   let p = Math.round((ld.lo + ld.hi)/2);
   for (let b = 0; b < 2; b++){
@@ -266,19 +274,22 @@ function mStep(tr, n, t, sd){
   if (i === 0 && tr.pad) for (let k = 0; k < 3; k++)
     mVoice(mfreq(tr, ch + k*2), t, L*sd*1.08, {w:tr.pad.w, v:tr.pad.v, a:L*sd*.35, sus:1, lp:tr.pad.lp, det:(k - 1)*7});
   const bz = tr.bass, bc = bz && bz.pat[i];
-  if (bc && bc !== '.') mVoice(mfreq(tr, mTone(tr, ch, +bc) - Lm), t, sd*(bz.len || 2), {w:bz.w, v:bz.v, lp:bz.lp});
+  if (bc && bc !== '.'){ const f = mfreq(tr, mTone(tr, ch, +bc) - Lm); // + обертон октавой выше, чтобы бас был слышен и на телефоне
+    mVoice(f, t, sd*(bz.len || 2), {w:bz.w, v:bz.v, lp:bz.lp}); mVoice(f*2, t, sd*(bz.len || 2)*.8, {w:'triangle', v:bz.v*.35, lp:1200}); }
   const ar = tr.arp, ac = ar && ar.pat[i];
-  if (ac && ac !== '.') mVoice(mfreq(tr, mTone(tr, ch, +ac) + Lm), t, sd*(ar.len || 1.5), {w:ar.w, v:ar.v, lp:ar.lp});
-  if (sec === 'C' || bar < 2) return; // затишье и вступление трека — без мелодии и ударных
-  if (tr.perc){ const pc = tr.perc[i]; if (pc !== '.') mPerc(pc, t); }
+  if (ac && ac !== '.'){ const f = mfreq(tr, mTone(tr, ch, +ac) + Lm*(ar.oct || 1)), d = sd*(ar.len || 1.5);
+    mVoice(f, t, d, {w:ar.w, v:ar.v, lp:ar.lp}); if (ar.bell) mVoice(f*3, t, d*.5, {w:'sine', v:ar.v*.25}); }
+  if (sec === 'C') return; // затишье — без мелодии и ударных
+  if (tr.perc && bar > 0){ const pc = tr.perc[i]; if (pc !== '.') mPerc(pc, t); }
   if (tr.lead){ const nt = mPhrase(tr, bar)[(bar % 2)*L + i];
     if (nt){ const f = mfreq(tr, nt[0]), d = sd*nt[1]*1.1 + .08, o = {w:tr.lead.w, v:tr.lead.v, lp:tr.lead.lp, a:.02};
-      if (tr.lead.det){ mVoice(f, t, d, {...o, det:-tr.lead.det}); mVoice(f, t, d, {...o, det:tr.lead.det}); } else mVoice(f, t, d, o); } }
+      if (tr.lead.det){ mVoice(f, t, d, {...o, det:-tr.lead.det}); mVoice(f, t, d, {...o, det:tr.lead.det}); } else mVoice(f, t, d, o);
+      if (tr.lead.bell){ mVoice(f*2, t, Math.min(d, .8), {w:'sine', v:tr.lead.v*.3}); mVoice(f*3, t, Math.min(d, .4), {w:'sine', v:tr.lead.v*.12}); } } }
 }
 function musicTick(){
   if (!musicOn || !AC || muted) return;
   const tr = TRACKS[musicMood] || TRACKS.calm, now = AC.currentTime, sd = 60/tr.bpm/4;
-  if (M.name !== musicMood){ M.name = musicMood; M.step = 0; M.phrase = null; M.next = Math.max(M.next, now + .05);
+  if (M.name !== musicMood){ M.name = musicMood; M.step = 0; M.phrase = null; M.next = Math.max(M.next, now + .15);
     musicBus().del.delayTime.setValueAtTime(sd*3, now); }
   if (M.next < now) M.next = now + .05;
   while (M.next < now + .25){

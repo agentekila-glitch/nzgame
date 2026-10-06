@@ -289,15 +289,66 @@ function updateWorld(dt, interact){
   v.vx += ((tx - v.x)*26 - v.vx*7) * dt; v.vy += ((ty - v.y)*26 - v.vy*7) * dt; v.x += v.vx*dt; v.y += v.vy*dt;
   if (Math.random() < .25 && !v.hidden) S.particles.push({x:v.x, y:v.y + 6, vx:rnd(-10,10), vy:rnd(-30,-10), life:.6, t:0, c:'rgba(255,190,110,.8)', s:2, g:-20, kind:'dot'});
 }
+// Земля под NPC: верх ближайшей опоры в колонке x рядом с уровнем ног (или null — там яма)
+function npcGround(x, y){
+  const c = Math.floor(x/T), r0 = Math.floor(y/T);
+  for (let r = Math.max(1, r0 - 3); r < Math.min(ROWS, r0 + 8); r++) if ((solid(c, r) || oneWay(c, r)) && !solid(c, r - 1)) return r*T;
+  return null;
+}
+// Тело NPC (ноги в точке x,y) задевает стену или потолок?
+const NPC_W = 9, NPC_H = 58;
+function npcHits(x, y){
+  const c0 = Math.floor((x - NPC_W)/T), c1 = Math.floor((x + NPC_W)/T), r0 = Math.max(0, Math.floor((y - NPC_H)/T)), r1 = Math.floor((y - 2)/T);
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) if (solid(c, r)) return true;
+  return false;
+}
+// Подбирает высоту прыжка, при которой дуга не проходит сквозь стены (null — так не перепрыгнуть)
+// Точка дуги прыжка: вверх — сначала подъём, потом шаг вперёд; вниз — сначала шаг с края, потом падение
+function hopPos(x0, y0, x1, y1, h, k){
+  const kx = y1 < y0 - T*1.5 ? k*k : y1 > y0 + T*1.5 ? 1 - (1 - k)*(1 - k) : k;
+  return [x0 + (x1 - x0)*kx, y0 + (y1 - y0)*k - h*4*k*(1 - k)];
+}
+function npcArc(x0, y0, x1, y1, base){
+  for (const h of [base, base + 30, base + 60, base + 100, base + 150, base + 210]){
+    let ok = true; for (let k = .04; k < 1 && ok; k += .04){ const q = hopPos(x0, y0, x1, y1, h, k); if (npcHits(q[0], q[1])) ok = false; }
+    if (ok) return h;
+  }
+  return null;
+}
+// Шаг NPC по земле: на ровном идёт, на уступах и над ямами прыгает, сквозь стены не проходит
+function npcMove(n, dx){
+  if (!dx || n.hop) return;
+  const nx = n.x + dx, gy = npcGround(nx, n.y);
+  if (gy !== null && Math.abs(gy - n.y) <= T*.5 && !npcHits(nx, gy)){ n.x = nx; n.y = gy; return; }
+  const dir = Math.sign(dx), up = n.who === 'julia' ? 9 : 3.5; // Жуля — акробатка, запрыгивает высоко
+  for (let i = 1; i <= 8; i++){ // ищем, куда можно приземлиться впереди
+    const lx = Math.floor(nx/T)*T + T/2 + dir*i*T, ly = npcGround(lx, n.y) ?? (up > 4 ? npcGround(lx, n.y - T*6) : null);
+    if (ly === null || ly - n.y < -T*up || npcHits(lx, ly)) continue;
+    const h = npcArc(n.x, n.y, lx, ly, 30 + Math.max(0, n.y - ly)); if (h === null) continue;
+    n.hop = {x0:n.x, y0:n.y, x1:lx, y1:ly, t:0, d:clamp(Math.abs(lx - n.x)/Math.max(n.speed, 160), .3, .75), h};
+    n.air = true; return;
+  }
+  // Дальше дороги нет: уходящий персонаж тихо растворяется, а идущий к цели — появляется уже на месте
+  if (n.state === 'leave') n.hidden = true;
+  else if (n.state === 'walk'){ n.x = n.tx; n.y = npcGround(n.tx, n.y) ?? n.y; n.alpha = 0; n.state = 'idle';
+    if (n.onArrive){ const f = n.onArrive; n.onArrive = null; f(); } }
+}
+function npcHop(n, dt){
+  const h = n.hop; h.t += dt; const k = Math.min(1, h.t/h.d);
+  const q = hopPos(h.x0, h.y0, h.x1, h.y1, h.h, k); n.x = q[0]; n.y = q[1]; n.phase += dt*10;
+  if (k >= 1){ n.hop = null; n.air = false; n.y = h.y1;
+    if (n.state === 'walk' && Math.abs(n.tx - n.x) < 1){ n.state = 'idle'; if (n.onArrive){ const f = n.onArrive; n.onArrive = null; f(); } } }
+}
 function updateNpcs(dt){
   const p = S.P;
   for (const n of S.W.npcs){
     n.t += dt; n.sayT -= dt;
     n.alpha = approach(n.alpha, n.hidden ? 0 : 1, dt*3);
     if (n.hidden) continue;
-    if (n.state === 'walk'){ const dx = n.tx - n.x; n.face = Math.sign(dx) || n.face; const st = Math.min(Math.abs(dx), n.speed*dt); n.x += Math.sign(dx)*st; n.phase += dt*n.speed*.05;
-      if (Math.abs(dx) < 1){ n.state = 'idle'; if (n.onArrive){ const f = n.onArrive; n.onArrive = null; f(); } } }
-    else if (n.state === 'leave'){ n.x += n.face*n.speed*dt; n.phase += dt*16; if (Math.abs(n.x - (p.x + p.w/2)) > VW) n.hidden = true; }
+    if (n.hop){ npcHop(n, dt); continue; }
+    if (n.state === 'walk'){ const dx = n.tx - n.x; n.face = Math.sign(dx) || n.face; const st = Math.min(Math.abs(dx), n.speed*dt); npcMove(n, Math.sign(dx)*st); n.phase += dt*n.speed*.05;
+      if (Math.abs(n.tx - n.x) < 1 && !n.hop){ n.state = 'idle'; if (n.onArrive){ const f = n.onArrive; n.onArrive = null; f(); } } }
+    else if (n.state === 'leave'){ npcMove(n, n.face*n.speed*dt); n.phase += dt*16; if (Math.abs(n.x - (p.x + p.w/2)) > VW) n.hidden = true; }
     else if (n.state === 'idle' && n.lookAt !== false && n.who !== 'boltik') n.face = (p.x + p.w/2) < n.x ? -1 : 1;
     // реплики в мире, когда игрок рядом
     if (n.barks && S.mode === 'play' && n.sayT < -3 && Math.abs(n.x - (p.x + p.w/2)) < 170 && Math.abs(n.y - (p.y + p.h)) < 120){
@@ -317,7 +368,7 @@ function startChase(cfg){
 function updateChase(dt){
   const C = S.chase; if (!C) return; const n = npc(C.npc), p = S.P;
   if (C.hop){ const h = C.hop; h.t += dt; const k = clamp(h.t / h.dur, 0, 1);
-    n.x = lerp(h.from.x, h.to.x, k); n.y = lerp(h.from.y, h.to.y, k) - Math.sin(k*Math.PI) * h.arc; n.phase += dt*14; n.air = k < 1;
+    const q = hopPos(h.from.x, h.from.y, h.to.x, h.to.y, h.arc, k); n.x = q[0]; n.y = q[1]; n.phase += dt*14; n.air = k < 1;
     if (k >= 1){ C.hop = null; n.air = false; dust(n.x, n.y, 5); } return; }
   if (S.mode !== 'play') return;
   const last = C.i >= C.path.length - 1, dx = n.x - (p.x + p.w/2), dy = n.y - (p.y + p.h);
@@ -326,7 +377,8 @@ function updateChase(dt){
   if (Math.abs(dx) < 240 && Math.abs(dy) < 300 || dx < 0){
     const nx = C.path[C.i+1], from = {x:n.x, y:n.y}, to = {x:nx[0]*T + 16, y:nx[1]*T};
     const dist = Math.hypot(to.x - from.x, to.y - from.y);
-    C.hop = {from, to, t:0, dur:clamp(dist/430, .38, 1.1), arc:40 + Math.max(0, from.y - to.y) * .9}; C.i++;
+    const base = 40 + Math.max(0, from.y - to.y) * .9;
+    C.hop = {from, to, t:0, dur:clamp(dist/430, .38, 1.1), arc:npcArc(from.x, from.y, to.x, to.y, base) ?? base}; C.i++;
     n.face = to.x >= from.x ? 1 : -1;
     if (C.taunts && (Math.random() < .55 || C.i < 3)){ n.say = C.taunts[(C.i + Math.floor(Math.random()*3)) % C.taunts.length]; n.sayT = 1.8; if (Math.random() < .5) sfx.giggle(); }
     sfx.jump();
