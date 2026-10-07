@@ -281,7 +281,7 @@ function updateWorld(dt, interact){
   for (const f of W.finds) f.t += dt;
   for (const lp of W.lamps){ lp.glow = Math.max(0, lp.glow - dt*.7); lp.out = Math.max(0, lp.out - dt*.5); }
   updateNpcs(dt);
-  // Искра: летит за Аей по пружине. Если рядом Аксель — прячется за спину.
+  // Искра: летит за Аей по пружине. Если рядом Странник — прячется за спину.
   const v = S.V; v.t += dt;
   const ax = npc('axel'), near = ax && !ax.hidden && ax.alpha > .5 && Math.abs(ax.x - (p.x + p.w/2)) < 260;
   v.scared = approach(v.scared, near ? 1 : 0, dt*2);
@@ -422,7 +422,7 @@ let journalOpen = false;
 
 /* ================= Сцены (визуальная новелла) =================
    Сцена: {title, lines:[{n:'Ая', t:'…', e:'happy', act(){…}}], left:'aya', right:'timofey', slides:true, end(){…}} */
-const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Аксель':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta'};
+const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Странник':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta'};
 const NAMECOL = {aya:'#B9572A', timofey:'#7A5A3A', miko:'#7A3E9A', gisa:'#B9801A', axel:'#3E6E70', vran:'#7E2E3C', cherry:'#9A2F31', julia:'#2F7F66', marta:'#4E6E40'};
 function startScene(name){
   const ch = curCh(), def = ch.scenes[name]; if (!def){ console.warn('нет сцены', name); return; }

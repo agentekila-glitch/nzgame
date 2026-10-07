@@ -12,8 +12,8 @@ const CH = {
     top:'#5A3E7A', topHi:'#7A5AA0', trim:'#F2C14E', obi:'#E06A8A', legs:'#3A2E48', boots:'#4A3040', hand:'#F8DCC8' },
   gisa:{ name:'Гиса', skin:'#F3D2BC', blush:'#F0957E', hair:'#3A2A24', hairHi:'#6A5040', eye:'#C77A1E',
     top:'#E8A93A', topHi:'#F5C962', trim:'#4A6E8A', obi:'#6B4A30', legs:'#C98A2A', boots:'#3A2E28', hand:'#F3D2BC' },
-  axel:{ name:'Аксель', skin:'#EAD0BE', blush:'#E2A08E', hair:'#B4B2C0', hairHi:'#E6E4EE', eye:'#5E8C8A',
-    top:'#2E4A4E', topHi:'#40666A', trim:'#8A8F96', obi:'#24343A', legs:'#22262E', boots:'#1C1A20', hand:'#2A2A32', scale:1.07, noMouth:true },
+  axel:{ name:'Странник', skin:'#EBCFBB', blush:'#DDB09C', hair:'#171B2B', hairHi:'#5C6C9E', eye:'#E8A23A',
+    top:'#25304F', topHi:'#34436C', trim:'#1E7A84', obi:'#3A2A22', legs:'#191C27', boots:'#110E14', hand:'#16161E', scale:1.08 },
   vran:{ name:'Вран', skin:'#F0DCCB', blush:'#E2A49A', hair:'#1E1A24', hairHi:'#4A4258', eye:'#8C2E3A',
     top:'#5E1E2A', topHi:'#7E2E3C', trim:'#E9E0CE', obi:'#2A1A20', legs:'#1E1A22', boots:'#141016', hand:'#EDE6DA', scale:1.08 },
   cherry:{ name:'Черри', skin:'#F7DDC9', blush:'#F2A69A', hair:'#2E2433', hairHi:'#54425E', eye:'#B9682E',
@@ -109,19 +109,31 @@ const CHAR_PARTS = {
     back(c, k, P){ const {swx, swy, t} = P;
       c.beginPath(); c.moveTo(-3, -29); c.quadraticCurveTo(-16 - swx, -28 + swy, -26 - swx*1.8, -20 + Math.sin(t*7)*2.4 + swy*.6);
       c.lineTo(-24 - swx*1.6, -15 + Math.sin(t*7)*2.4 + swy*.6); c.quadraticCurveTo(-14 - swx*.6, -22, -2, -24); c.closePath(); fillInk(c, k.trim);
-      c.beginPath(); c.moveTo(-7, -54); c.bezierCurveTo(-18, -52, -18, -40, -14, -34); c.lineTo(6, -34); c.quadraticCurveTo(12, -46, 8, -54); c.closePath(); fillInk(c, k.hair); },
+      c.beginPath(); c.moveTo(-7, -54); c.bezierCurveTo(-17, -52, -17, -45, -13, -41); c.lineTo(5, -41); c.quadraticCurveTo(11, -48, 8, -54); c.closePath(); fillInk(c, k.hair); },
     torso(c, k){
-      c.beginPath(); c.moveTo(-9, -30); c.lineTo(-2, -20); c.lineTo(-1, -11); c.moveTo(9, -30); c.lineTo(3, -21); c.lineWidth = 1.6; c.strokeStyle = shade(k.top, -.35); c.stroke();
-      pathRR(c, -10.4, -16, 20.8, 3, 1.4); fillInk(c, k.obi, 1.4);
-      c.beginPath(); c.moveTo(-9, -31); c.quadraticCurveTo(0, -25, 9, -31); c.quadraticCurveTo(0, -35, -9, -31); fillInk(c, k.trim, 1.6); },
-    coat(c, k){ c.beginPath(); c.moveTo(-10.5, -12); c.lineTo(-13, 0); c.lineTo(-3, -1); c.lineTo(-1, -11); c.moveTo(10.5, -12); c.lineTo(12, -1); c.lineTo(3, -1); c.lineTo(1, -11); fillInk(c, shade(k.top, -.06), 1.8); },
-    hand(c){ c.beginPath(); c.arc(0, 12, 1.4, 0, Math.PI*2); c.fillStyle = '#D9D2C0'; c.fill(); },
+      // высокий ворот с бирюзовой подкладкой, ремень через грудь и значок со сломанным знаком
+      c.beginPath(); c.moveTo(-10, -31); c.lineTo(-12, -38); c.lineTo(-4, -32); c.closePath(); c.moveTo(10, -31); c.lineTo(12, -38); c.lineTo(4, -32); c.closePath(); fillInk(c, k.trim, 1.4);
+      c.beginPath(); c.moveTo(-9, -30); c.lineTo(9, -14); c.lineWidth = 3; c.strokeStyle = INK; c.stroke(); c.lineWidth = 1.8; c.strokeStyle = k.obi; c.stroke();
+      c.beginPath(); c.arc(-4.5, -26, 2.3, 0, Math.PI*2); fillInk(c, '#C9CED8', 1.2);
+      c.beginPath(); c.moveTo(-5.1, -28); c.lineTo(-3.7, -24); c.lineWidth = .9; c.strokeStyle = '#2A9CA6'; c.stroke();
+      pathRR(c, -10.4, -16, 20.8, 3, 1.4); fillInk(c, '#1A1C26', 1.4);
+      c.beginPath(); c.rect(-1.6, -16, 3.2, 3); c.fillStyle = '#D9A441'; c.fill(); },
+    coat(c, k){ c.beginPath(); c.moveTo(-10.5, -12); c.lineTo(-13, 0); c.lineTo(-3, -1); c.lineTo(-1, -11); c.moveTo(10.5, -12); c.lineTo(12, -1); c.lineTo(3, -1); c.lineTo(1, -11); fillInk(c, shade(k.top, -.06), 1.8);
+      c.beginPath(); c.moveTo(-12.2, -1.6); c.lineTo(-3.4, -2.2); c.moveTo(11.4, -2); c.lineTo(3.4, -2.2); c.lineWidth = 1.2; c.strokeStyle = k.trim; c.stroke(); },
+    hand(c){ c.beginPath(); c.arc(0, 12, 1.5, 0, Math.PI*2); c.fillStyle = '#C9CED8'; c.fill(); },
+    smirk:true,
     front(c, k, P){ const {swx} = P;
-      c.beginPath(); c.moveTo(-14.6, 2); c.lineTo(14.6, 2); c.lineTo(14, 13); c.quadraticCurveTo(0, 17, -13, 13); c.closePath(); fillInk(c, k.trim, 1.8);
-      c.beginPath(); c.moveTo(-10, 8); c.lineTo(10, 7); c.lineWidth = 1; c.strokeStyle = shade(k.trim, -.25); c.stroke();
-      c.beginPath(); c.moveTo(-13.6, 2); c.lineTo(-15.5 - swx*.2, -6); c.lineTo(-12, -8); c.lineTo(-14, -13.5); c.lineTo(-6, -14); c.lineTo(-2, -17.5); c.lineTo(3, -14.5); c.lineTo(9, -16);
-      c.lineTo(10, -11); c.lineTo(15, -7); c.lineTo(12.5, -4); c.lineTo(13.5, 1.5); c.quadraticCurveTo(10.5, -2, 9, -1); c.lineTo(6.5, -5); c.lineTo(3, -1.5); c.lineTo(0, -5.4); c.lineTo(-4, -1.6); c.lineTo(-8, -5); c.closePath(); fillInk(c, k.hair);
-      c.save(); c.globalAlpha = .6; c.beginPath(); c.moveTo(-7, -10); c.lineTo(-2, -12); c.lineTo(4, -10.5); c.lineWidth = 1.5; c.strokeStyle = k.hairHi; c.stroke(); c.restore(); }
+      // шарф обмотан вокруг шеи, под подбородком
+      c.beginPath(); c.moveTo(-11, 10.5); c.quadraticCurveTo(0, 13.5, 11.5, 10); c.lineTo(12, 16); c.quadraticCurveTo(0, 19, -11.5, 16); c.closePath(); fillInk(c, k.trim, 1.6);
+      c.beginPath(); c.moveTo(-9, 14); c.quadraticCurveTo(0, 16, 10, 13.4); c.lineWidth = 1; c.strokeStyle = '#E8A23A'; c.stroke();
+      // короткие растрёпанные волосы
+      c.beginPath(); c.moveTo(-13.6, 1); c.lineTo(-15 - swx*.2, -5); c.lineTo(-12, -8); c.lineTo(-14, -13.5); c.lineTo(-6, -14.5); c.lineTo(-2, -18); c.lineTo(3, -14.5); c.lineTo(9, -16.5);
+      c.lineTo(10, -11); c.lineTo(15, -8); c.lineTo(12.6, -5); c.lineTo(13.4, -1); c.quadraticCurveTo(10.6, -4, 9, -3.4); c.lineTo(6.6, -6.4); c.lineTo(3.4, -3); c.lineTo(.4, -6.6); c.lineTo(-3.6, -3.4); c.lineTo(-7.6, -6.6); c.lineTo(-11, -2); c.closePath(); fillInk(c, k.hair);
+      // седая прядь
+      c.beginPath(); c.moveTo(3.4, -14.5); c.lineTo(6.6, -6.4); c.lineTo(4.6, -5); c.lineTo(1.6, -12.6); c.closePath(); c.fillStyle = '#D8DCE6'; c.fill();
+      c.save(); c.globalAlpha = .6; c.beginPath(); c.moveTo(-8, -10.5); c.lineTo(-3, -12.5); c.lineWidth = 1.5; c.strokeStyle = k.hairHi; c.stroke(); c.restore();
+      // брови — прямые и тёмные
+      c.beginPath(); c.moveTo(-1.6, -3.2); c.lineTo(3.4, -2.4); c.moveTo(6.2, -2.4); c.lineTo(10.6, -3.4); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke(); }
   },
   vran:{
     back(c, k){ c.beginPath(); c.moveTo(-6, -54); c.bezierCurveTo(-18, -52, -17, -42, -13, -36); c.lineTo(4, -36); c.quadraticCurveTo(12, -46, 8, -54); c.closePath(); fillInk(c, k.hair); },
@@ -606,8 +618,8 @@ Object.assign(VN, {
     hair:'#8A5CB6', hairMid:'#B48AD8', hairHi:'#EEDCFB', iris:['#3A1E50','#8E4EB0','#E8C0F8'], name:'#7A3E9A' },
   gisa:{ skin:'#F6D8C2', skinSh:'#E4B69E', blush:'#F0957E', lip:'#C05A50',
     hair:'#2E211B', hairMid:'#4E382C', hairHi:'#9A7A62', iris:['#5A3008','#C77A1E','#F8CC6A'], name:'#B9801A' },
-  axel:{ skin:'#F0D8C6', skinSh:'#DAB49E', blush:'#E9A090', lip:'#B86060',
-    hair:'#9896A6', hairMid:'#BEBCCA', hairHi:'#F2F0F8', iris:['#16302F','#4E8A88','#AEE2DC'], name:'#3E6E70', male:true, eyeH:.74, browW:4.2, noMouth:true },
+  axel:{ skin:'#EFD2BE', skinSh:'#D6AE96', blush:'#DDA48E', lip:'#A8645C',
+    hair:'#141828', hairMid:'#283252', hairHi:'#7C8EC4', iris:['#4A2406','#E39A2A','#FFE19A'], name:'#1E7A84', male:true },
   vran:{ skin:'#F4E2D4', skinSh:'#DEC2AE', blush:'#E8A79A', lip:'#A85460',
     hair:'#17131D', hairMid:'#2E283A', hairHi:'#6E6486', iris:['#3A0E16','#8C2E3A','#E8949A'], name:'#7E2E3C', male:true, eyeH:.68, browW:4 }
 });
@@ -758,40 +770,112 @@ function vnGisa(c, st){
     c.save(); c.globalAlpha = .8; c.fillStyle = '#FFF'; c.beginPath(); c.ellipse(x - 6, y - 7, 6, 3.6, -.5, 0, Math.PI*2); c.fill(); c.restore(); }
   c.restore();
 }
-// ---------- АКСЕЛЬ: пепельные растрёпанные волосы, шрам у брови, серый шарф закрывает рот, тёмно-бирюзовое пальто с высоким воротом
+// ---------- СТРАННИК (Аксель — имя в игре не называется): короткие тёмные волосы с седой прядью, янтарные глаза,
+//            шрам через бровь, тёмно-синее пальто с высоким воротом и бирюзовой подкладкой, бирюзовый шарф на шее,
+//            кожаный ремень через грудь и значок со сломанным знаком фонарщиков
+function vnAxelFace(c, k){ // мужское лицо: шире скулы, угол челюсти, прямой подбородок
+  c.beginPath();
+  c.moveTo(-60, -388); c.bezierCurveTo(-66, -340, -64, -302, -57, -276);
+  c.lineTo(-32, -246); c.quadraticCurveTo(-12, -229, 10, -228); c.quadraticCurveTo(32, -229, 52, -246);
+  c.lineTo(72, -276); c.bezierCurveTo(80, -302, 84, -340, 78, -388); c.closePath();
+  c.fillStyle = k.skin; c.fill(); ink(c, 3);
+  c.save(); c.clip(); c.fillStyle = k.skinSh; c.globalAlpha = .55;
+  c.beginPath(); c.moveTo(80, -400); c.bezierCurveTo(68, -330, 66, -284, 42, -236); c.lineTo(94, -230); c.lineTo(94, -400); c.fill();
+  c.globalAlpha = .45; c.beginPath(); c.ellipse(4, -376, 84, 26, 0, 0, Math.PI*2); c.fill();
+  c.globalAlpha = .2; c.beginPath(); c.ellipse(-46, -284, 9, 22, .25, 0, Math.PI*2); c.ellipse(62, -284, 8, 20, -.25, 0, Math.PI*2); c.fill();
+  c.restore();
+}
+function vnAxelBrows(c, k, st){
+  const e = st.emo || '', lift = e === 'surprised' ? -9 : 0;
+  const inner = e === 'angry' ? 7 : (e === 'worried' || e === 'sad') ? -7 : 0, smug = e === 'smug' ? -7 : 0;
+  c.save(); c.globalAlpha = .92;
+  for (const [xo, xi, yo, s] of [[-42, -4, -337, 1], [62, 22, -339, -1]]){
+    const yi = -333 + lift + inner, yo2 = yo + lift + (s < 0 ? smug : 0);
+    c.beginPath(); c.moveTo(xo, yo2 + 1); c.quadraticCurveTo((xo + xi)/2, yo2 - 5 + (yi - yo2)*.5, xi, yi);
+    c.lineTo(xi, yi + 7); c.quadraticCurveTo((xo + xi)/2, yo2 + 4 + (yi - yo2)*.5, xo + s*4, yo2 + 6); c.closePath();
+    c.fillStyle = k.hair; c.fill(); ink(c, 1.8);
+  }
+  c.restore();
+}
+function vnAxelMouth(c, k, st){
+  const e = st.emo || '', open = st.talk && Math.sin(st.t*22) > -.1, x = 10, y = -254;
+  c.beginPath(); c.moveTo(13, -298); c.quadraticCurveTo(18, -286, 15, -279); c.quadraticCurveTo(11, -276, 7, -278); c.lineWidth = 2; c.strokeStyle = 'rgba(140,86,74,.75)'; c.stroke();
+  if (e === 'surprised' || open){
+    const h = e === 'surprised' ? 7 : 3 + Math.abs(Math.sin(st.t*22))*3.4;
+    c.beginPath(); c.ellipse(x, y + 1, e === 'surprised' ? 6 : 9, h, 0, 0, Math.PI*2); c.fillStyle = '#5E242C'; c.fill(); ink(c, 2.4); return;
+  }
+  c.beginPath();
+  if (e === 'smug' || e === 'happy'){ c.moveTo(x - 11, y + 1); c.quadraticCurveTo(x + 2, y + 4, x + 13, y - 5); }
+  else if (e === 'worried' || e === 'sad'){ c.moveTo(x - 10, y + 2); c.quadraticCurveTo(x, y - 2, x + 10, y + 2); }
+  else { c.moveTo(x - 11, y); c.quadraticCurveTo(x, y + 2, x + 11, y - 1); }
+  ink(c, 2.6);
+  c.save(); c.globalAlpha = .3; c.beginPath(); c.moveTo(x - 5, y + 9); c.quadraticCurveTo(x, y + 11, x + 6, y + 9); c.lineWidth = 2; c.strokeStyle = k.skinSh; c.stroke(); c.restore();
+}
 function vnAxel(c, st){
-  const k = VN.axel, t = st.t, sw = Math.sin(t*1.4)*4, sw2 = Math.sin(t*1.1 + 1)*5;
+  const k = VN.axel, t = st.t, sw = Math.sin(t*1.4)*3, sw2 = Math.sin(t*1.1 + 1)*5;
+  // волосы сзади: коротко, до мочек ушей
   headOn(c);
-  c.beginPath(); c.moveTo(-72, -398); c.bezierCurveTo(-110, -340, -104, -280, -92 + sw*.4, -236); c.lineTo(-70, -256); c.lineTo(-64, -228); c.lineTo(-40, -244); c.lineTo(70, -240);
-  c.bezierCurveTo(100, -290, 106, -340, 92, -384); c.bezierCurveTo(80, -430, 50, -452, 0, -454); c.closePath(); c.fillStyle = hairShade(c, k, -454, -228); c.fill(); ink(c, 3);
+  const spikes = [[-64,-292],[-82,-326],[-78,-350],[-102,-388],[-82,-404],[-100,-450],[-58,-448],[-56,-488],[-18,-466],[12,-498],[34,-466],[74,-480],[80,-440],[104,-412],[92,-384],[98,-342],[96,-302],[82,-280]];
+  c.beginPath(); c.moveTo(spikes[0][0], spikes[0][1]);
+  for (let i=1;i<spikes.length;i++){ const a = spikes[i-1], b = spikes[i]; c.quadraticCurveTo((a[0] + b[0])/2 + (i%2 ? -4 : 4), (a[1] + b[1])/2, b[0] + (i%2 ? 0 : sw*.3), b[1]); }
+  c.lineTo(-60, -276); c.closePath(); c.fillStyle = hairShade(c, k, -500, -276); c.fill(); ink(c, 3);
   c.restore();
-  torso(c); c.fillStyle = gradV(c, -200, 10, '#30525A', '#1A2E34'); c.fill(); ink(c, 3);
-  vnNeck(c, k);
+  // пальто
+  torso(c); c.fillStyle = gradV(c, -200, 10, '#2E3A60', '#141A2C'); c.fill(); ink(c, 3);
   c.save(); torso(c); c.clip();
-  c.beginPath(); c.moveTo(-60, -200); c.lineTo(-20, -40); c.lineTo(-10, 20); c.moveTo(70, -200); c.lineTo(30, -60); c.lineWidth = 3; c.strokeStyle = 'rgba(10,20,24,.55)'; c.stroke();
-  c.beginPath(); c.rect(-160, -52, 340, 24); c.fillStyle = '#1E2A30'; c.fill(); ink(c, 2.4);
-  c.beginPath(); pathRR(c, -10, -56, 30, 32, 4); c.fillStyle = '#8A8F96'; c.fill(); ink(c, 2);
+  c.beginPath(); c.moveTo(-36, -200); c.lineTo(4, -110); c.lineTo(46, -200); c.closePath(); c.fillStyle = '#1C1F2C'; c.fill(); ink(c, 2.2);
+  c.beginPath(); c.moveTo(40, -150); c.lineTo(52, 20); c.lineWidth = 2.4; c.strokeStyle = 'rgba(8,10,20,.6)'; c.stroke();
+  for (let i=0;i<4;i++){ c.beginPath(); c.arc(64, -120 + i*34, 5, 0, Math.PI*2); c.fillStyle = '#D9A441'; c.fill(); ink(c, 1.6); }
+  // ремень через грудь с латунной пряжкой
+  c.beginPath(); c.moveTo(-150, -150); c.lineTo(-124, -170); c.lineTo(170, 10); c.lineTo(140, 24); c.closePath(); c.fillStyle = gradV(c, -170, 24, '#4A3428', '#2E1E16'); c.fill(); ink(c, 2.4);
+  c.save(); c.translate(-10, -76); c.rotate(.55); pathRR(c, -14, -11, 28, 22, 4); c.fillStyle = '#D9A441'; c.fill(); ink(c, 2); pathRR(c, -7, -5, 14, 10, 2); c.fillStyle = '#4A3428'; c.fill(); c.restore();
   c.restore();
-  c.beginPath(); c.moveTo(-96, -196); c.lineTo(-70, -250); c.lineTo(-36, -214); c.lineTo(-30, -150); c.closePath(); c.fillStyle = '#2A464C'; c.fill(); ink(c, 2.6);
-  c.beginPath(); c.moveTo(108, -196); c.lineTo(84, -252); c.lineTo(48, -214); c.lineTo(42, -150); c.closePath(); c.fillStyle = '#2A464C'; c.fill(); ink(c, 2.6);
+  c.save(); c.beginPath(); // шея — шире, чем у девушек c.moveTo(-26, -250); c.lineTo(34, -250); c.lineTo(40, -176); c.quadraticCurveTo(6, -166, -32, -176); c.closePath(); c.fillStyle = k.skin; c.fill(); ink(c, 3);
+  c.clip(); c.fillStyle = k.skinSh; c.globalAlpha = .6; c.beginPath(); c.ellipse(6, -240, 46, 20, 0, 0, Math.PI*2); c.fill(); c.restore();
+  // высокий ворот: тёмно-синий снаружи, бирюзовый внутри
+  for (const s of [-1, 1]){ const o = s < 0 ? 0 : 8;
+    c.beginPath(); c.moveTo(4 + s*108 + o, -192); c.lineTo(4 + s*86 + o, -266); c.lineTo(4 + s*42 + o*.5, -226); c.lineTo(4 + s*38, -152); c.closePath(); c.fillStyle = '#222C4A'; c.fill(); ink(c, 2.6);
+    c.beginPath(); c.moveTo(4 + s*86 + o, -266); c.lineTo(4 + s*42 + o*.5, -226); c.lineTo(4 + s*48 + o*.5, -212); c.lineTo(4 + s*80 + o, -246); c.closePath(); c.fillStyle = gradV(c, -266, -212, '#38B4BC', '#1E7A84'); c.fill(); ink(c, 2); }
+  // шарф вокруг шеи и конец, переброшенный через плечо
+  c.beginPath(); c.moveTo(-48, -238); c.quadraticCurveTo(6, -214, 60, -240); c.lineTo(66, -198); c.quadraticCurveTo(6, -172, -54, -196); c.closePath();
+  c.fillStyle = gradV(c, -240, -172, '#2EA6B0', '#145A64'); c.fill(); ink(c, 3);
+  c.beginPath(); c.moveTo(-50, -216); c.quadraticCurveTo(6, -194, 62, -218); c.lineWidth = 2.4; c.strokeStyle = '#E8A23A'; c.stroke();
+  c.beginPath(); c.moveTo(34, -196); c.bezierCurveTo(52, -150, 46 + sw2*.4, -100, 58 + sw2, -40); c.lineTo(90 + sw2, -46); c.bezierCurveTo(80 + sw2*.4, -100, 82, -150, 64, -200); c.closePath();
+  c.fillStyle = gradV(c, -200, -40, '#2EA6B0', '#145A64'); c.fill(); ink(c, 2.6);
+  c.beginPath(); c.moveTo(56 + sw2*.9, -64); c.lineTo(86 + sw2*.9, -70); c.lineWidth = 2.4; c.strokeStyle = '#E8A23A'; c.stroke();
+  for (let i=0;i<5;i++){ c.beginPath(); c.moveTo(60 + sw2 + i*7, -42 - i*1.2); c.lineTo(60 + sw2 + i*7, -30 - i*1.2); c.lineWidth = 2; c.strokeStyle = '#145A64'; c.stroke(); }
+  // значок со сломанным знаком фонарщиков на ремне
+  c.save(); c.translate(-82, -130);
+  c.save(); c.globalCompositeOperation = 'lighter'; const g = c.createRadialGradient(0, 0, 4, 0, 0, 34); g.addColorStop(0, `rgba(80,220,230,${.35 + .15*Math.sin(t*2)})`); g.addColorStop(1, 'rgba(80,220,230,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, 34, 0, Math.PI*2); c.fill(); c.restore();
+  c.beginPath(); c.arc(0, 0, 17, 0, Math.PI*2); c.fillStyle = gradV(c, -17, 17, '#E6E9F0', '#9AA2B2'); c.fill(); ink(c, 2.2);
+  c.beginPath(); c.arc(0, 0, 12, 0, Math.PI*2); c.lineWidth = 1.6; c.strokeStyle = '#5A6274'; c.stroke();
+  c.beginPath(); c.moveTo(-4, -7); c.lineTo(4, -7); c.lineTo(5, 4); c.lineTo(-5, 4); c.closePath(); c.moveTo(-6, 4); c.lineTo(6, 4); c.lineWidth = 1.8; c.strokeStyle = '#3A4252'; c.stroke();
+  c.beginPath(); c.moveTo(-3, -16); c.lineTo(2, -6); c.lineTo(-2, 0); c.lineTo(4, 9); c.lineTo(1, 16); c.lineWidth = 2.2; c.strokeStyle = '#4FD8E0'; c.stroke();
+  c.restore();
   armSeams(c);
+  // голова
   headOn(c);
-  vnFaceAll(c, k, st);
+  vnAxelFace(c, k);
+  c.save(); c.globalAlpha = .3; vnBlushSoft(c, k); c.restore();
+  vnEye(c, k, -18, -306, 31, 26, st, false); vnEye(c, k, 38, -305, 29, 25, st, true);
+  c.save(); c.globalAlpha = .45; c.strokeStyle = INK; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(-34, -322); c.quadraticCurveTo(-18, -328, -2, -321); c.moveTo(24, -321); c.quadraticCurveTo(38, -327, 52, -320); c.stroke(); c.restore();
+  vnAxelMouth(c, k, st);
+  // чёлка: короткая, растрёпанная, с одной длинной прядью
+  bangs(c, k, [[-70,-334],[-94,-444],[-30,-490],[14,-484],[82,-478],[110,-410],[90,-336]],
+    [[90,-346],[66,-374],[42,-362],[16,-380],[-10,-364],[-38,-380],[-66,-352]],
+    [[84,-320],[58,-348],[30,-322],[4,-352],[-24,-338],[-56,-336]], 8);
+  lock(c, -60, -352, -74, -326, -70 + sw*.2, -304, -74 + sw*.3, -284, 9, k.hairMid);
+  lock(c, 80, -350, 92, -326, 88 + sw*.2, -306, 92 + sw*.3, -288, 8, k.hair);
+  // седая прядь
+  lock(c, 30, -452, 50, -410, 44, -370, 40, -330, 7, '#D6DAE6');
+  c.save(); c.globalAlpha = .45; c.beginPath(); c.moveTo(34, -440); c.quadraticCurveTo(46, -400, 42, -350); c.lineWidth = 2; c.strokeStyle = '#FFFFFF'; c.stroke(); c.restore();
+  c.save(); c.globalAlpha = .35; c.strokeStyle = k.hairHi; c.lineWidth = 3;
+  for (const [x0, y0, x1, y1] of [[-50,-440,-30,-400],[-14,-458,-4,-414],[64,-448,72,-404]]){ c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(x0 + 14, (y0 + y1)/2, x1, y1); c.stroke(); } c.restore();
+  vnAxelBrows(c, k, st);
   // шрам через левую бровь
-  c.beginPath(); c.moveTo(-34, -372); c.lineTo(-24, -330); c.lineWidth = 2.4; c.strokeStyle = 'rgba(170,90,90,.75)'; c.stroke();
-  // шарф поверх нижней части лица
-  c.beginPath(); c.moveTo(-74, -290); c.quadraticCurveTo(6, -270, 90, -294); c.lineTo(104, -190); c.quadraticCurveTo(10, -150, -86, -190); c.closePath();
-  c.fillStyle = gradV(c, -294, -150, '#9AA0A8', '#6E747E'); c.fill(); ink(c, 3);
-  c.save(); c.globalAlpha = .4; c.strokeStyle = INK; c.lineWidth = 2;
-  for (const y of [-262, -232, -204]){ c.beginPath(); c.moveTo(-76, y + 4); c.quadraticCurveTo(10, y + 18, 98, y); c.stroke(); } c.restore();
-  c.beginPath(); c.moveTo(70, -196); c.bezierCurveTo(90, -150, 80 + sw2, -90, 104 + sw2, -30); c.lineTo(132 + sw2, -40); c.bezierCurveTo(110 + sw2, -90, 116, -150, 100, -200); c.closePath();
-  c.fillStyle = gradV(c, -200, -30, '#9AA0A8', '#6E747E'); c.fill(); ink(c, 2.6);
-  bangs(c, k, [[-70,-334],[-86,-428],[-18,-470],[18,-464],[76,-458],[102,-404],[88,-336]],
-    [[88,-340],[68,-366],[44,-350],[18,-370],[-10,-352],[-38,-370],[-66,-346]],
-    [[84,-282],[56,-318],[30,-300],[0,-326],[-26,-312],[-56,-322]], 6);
-  vnBrowsOver(c, st, k);
-  lock(c, -62, -346, -84, -300, -76 + sw*.3, -258, -86 + sw*.5, -236, 10, k.hairMid);
-  lock(c, 80, -340, 98, -300, 94 + sw2*.3, -262, 102 + sw2*.4, -240, 8, k.hair);
+  c.beginPath(); c.moveTo(-42, -356); c.lineTo(-30, -318); c.lineWidth = 3.4; c.strokeStyle = 'rgba(150,64,64,.85)'; c.stroke();
+  c.beginPath(); c.moveTo(-41, -346); c.lineTo(-35, -345); c.moveTo(-37, -332); c.lineTo(-31, -331); c.lineWidth = 1.6; c.stroke();
   c.restore();
 }
 // ---------- ВРАН: гладко зачёсанные чёрные волосы, монокль, бордовый сюртук со стоячим воротником, белый шейный платок

@@ -435,7 +435,7 @@ function signBoard(x, y, text, col){
   pathRR(ctx, x - w/2, y - 13, w, 26, 4); fillInk(ctx, '#E9DFC8', 2);
   ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y + 1);
 }
-// знак фонарщиков: фонарь в круге (у Акселя — сломанный)
+// знак фонарщиков: фонарь в круге (у Странника — сломанный)
 function lampSign(c, x, y, broken=false){
   c.save(); c.translate(x, y); c.beginPath(); c.arc(0, 0, 13, 0, Math.PI*2); fillInk(c, '#C9A15A', 2);
   c.beginPath(); c.moveTo(-5, 6); c.lineTo(-4, -4); c.lineTo(4, -4); c.lineTo(5, 6); c.closePath(); fillInk(c, '#FFE0A0', 1.4);
