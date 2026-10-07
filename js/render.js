@@ -549,13 +549,48 @@ function fmtHint(t){
   return t.replace('{lr}', tu ? '◀ ▶' : `${keyLabel('left')} ${keyLabel('right')}`).replace('{jump}', tu ? '▲' : keyLabel('jump'))
     .replace('{down}', tu ? '▼' : keyLabel('down')).replace('{sprint}', tu ? '' : ` · ${keyLabel('sprint')} — быстрее`);
 }
-function drawHint(h){
-  if (h.a <= .01) return; const x = h.c*T, y = h.r*T, text = fmtHint(h.t);
-  ctx.save(); ctx.globalAlpha = h.a; ctx.font = `800 14px ${SANS}`; const w = ctx.measureText(text).width + 26;
-  ctx.translate(x, y + Math.sin(S.time*2)*2); ctx.rotate(-.015);
-  pathRR(ctx, -w/2, -16, w, 32, 8); ctx.fillStyle = 'rgba(244,237,223,.94)'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#E8823A'; ctx.beginPath(); ctx.arc(0, -16, 3.5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 0, 1);
+// Подсказка на уровне: одна, крупная, сверху по центру экрана — не теряется на фоне и не налезает на другие.
+// Клавиши рисуются как настоящие кнопки.
+function hintSegments(t){
+  const tu = touchUI(), out = [], re = /\{(lr|jump|down|sprint)\}/g; let last = 0, m;
+  while ((m = re.exec(t))){
+    if (m.index > last) out.push({s:t.slice(last, m.index)});
+    const k = m[1];
+    if (k === 'lr') out.push({k:tu ? '◀' : keyLabel('left')}, {s:' '}, {k:tu ? '▶' : keyLabel('right')});
+    else if (k === 'jump') out.push({k:tu ? '▲' : keyLabel('jump')});
+    else if (k === 'down') out.push({k:tu ? '▼' : keyLabel('down')});
+    else if (!tu) out.push({s:' · '}, {k:keyLabel('sprint')}, {s:' — быстрее'});
+    last = re.lastIndex;
+  }
+  if (last < t.length) out.push({s:t.slice(last)});
+  return out;
+}
+function drawHintBanner(){
+  if (!SET.hints || S.scene || S.mode !== 'play') return;
+  let best = null; for (const h of S.W.hints) if (h.a > .01 && (!best || h.a > best.a)) best = h;
+  if (!best) return;
+  const segs = hintSegments(best.t); let fs = 18;
+  const measure = () => { let w = 0;
+    for (const g of segs){ if (g.k){ ctx.font = `900 ${fs - 2}px ${SANS}`; g.w = Math.max(fs + 12, ctx.measureText(g.k).width + 16); w += g.w + 4; }
+      else { ctx.font = `800 ${fs}px ${SANS}`; g.w = ctx.measureText(g.s).width; w += g.w; } }
+    return w; };
+  let tw = measure(); while (tw + 74 > VW - 40 && fs > 12){ fs--; tw = measure(); }
+  const bw = tw + 74, bh = fs + 28, x = VW/2 - bw/2, y = 62 + Math.sin(S.time*2)*1.5, iy = y + bh/2;
+  ctx.save(); ctx.globalAlpha = best.a;
+  ctx.shadowColor = 'rgba(242,180,90,.5)'; ctx.shadowBlur = 22;
+  pathRR(ctx, x, y, bw, bh, bh/2); ctx.fillStyle = 'rgba(16,13,30,.92)'; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(242,180,90,.9)'; ctx.stroke();
+  const ix = x + 26; // огонёк-значок
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ix, iy, 18, 'rgba(255,190,110,A)', .6 + .2*Math.sin(S.time*4)); ctx.restore();
+  ctx.fillStyle = '#FFD48A'; ctx.beginPath(); ctx.moveTo(ix, iy - 9); ctx.quadraticCurveTo(ix + 8, iy, ix, iy + 8); ctx.quadraticCurveTo(ix - 8, iy, ix, iy - 9); ctx.fill();
+  let cx = x + 48; ctx.textBaseline = 'middle';
+  for (const g of segs){
+    if (g.k){ const kh = fs + 10, ky = iy - kh/2;
+      pathRR(ctx, cx, ky + 3, g.w, kh, 7); ctx.fillStyle = '#8E7A5E'; ctx.fill();
+      pathRR(ctx, cx, ky, g.w, kh, 7); ctx.fillStyle = '#F4EDDF'; ctx.fill();
+      ctx.fillStyle = '#2B2233'; ctx.font = `900 ${fs - 2}px ${SANS}`; ctx.textAlign = 'center'; ctx.fillText(g.k, cx + g.w/2, iy + 1); cx += g.w + 4; }
+    else { ctx.fillStyle = '#F7EEDC'; ctx.font = `800 ${fs}px ${SANS}`; ctx.textAlign = 'left'; ctx.fillText(g.s, cx, iy + 1); cx += g.w; }
+  }
   ctx.restore();
 }
 function bubble(x, y, text, col='#2B2233'){
@@ -715,6 +750,39 @@ function menuStatic(){
   b.fillStyle = '#C9A15A'; b.fillRect(fx + 76*u, ry - 12*u, 8*u, 10*u); b.fillRect(fx + 82*u, ry - 16*u, 2*u, 6*u);
   return MENU_BG = {key, sky, far, near, roof, lx, ly, ry, cx, fx, hx, u, pad};
 }
+// Мысли в облачках над городом — медленно проплывают по небу меню
+const MENU_THOUGHTS = [
+  'Даже маленький огонёк видно издалека.',
+  'Страшно — значит, ты уже в пути.',
+  'Не бойся идти медленно. Бойся стоять в темноте.',
+  'Свет не спорит с темнотой. Он просто горит.',
+  'Упал? Поднимайся у ближайшего фонаря.',
+  'Самые тёплые окна — там, где тебя ждут.',
+  'Кто зажигает фонари, первым видит рассвет.',
+  'Один фонарь — это уже улица.',
+  'Темно? Значит, самое время светить.',
+  'Чай остынет. Хорошие вопросы — никогда.'
+];
+// Места в небе справа от меню, где появляются пузыри (доли ширины и высоты экрана)
+const THOUGHT_SPOTS = [[.74, .12], [.8, .27], [.71, .32], [.78, .08], [.86, .19], [.72, .21]];
+function drawThoughts(u, t){
+  const CYCLE = 8, k = t/CYCLE, n = Math.floor(k), p = k - n; // каждые 8 секунд — новый пузырь
+  const text = MENU_THOUGHTS[(n*7) % MENU_THOUGHTS.length], spot = THOUGHT_SPOTS[(n*5) % THOUGHT_SPOTS.length];
+  const appear = clamp(p/.16, 0, 1), vanish = clamp((1 - p)/.2, 0, 1), a = Math.min(appear, vanish);
+  if (a <= 0) return;
+  const pop = appear < 1 ? 1 - Math.pow(1 - appear, 3)*1.0 + Math.sin(appear*Math.PI)*.08 : 1; // мягкое «надувание» с лёгким перелётом
+  ctx.save(); ctx.font = `italic 600 ${Math.max(12, Math.round(15*u))}px ${SERIF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 48*u, h = 40*u;
+  const x = clamp(VW*spot[0], w/2 + 10*u, VW - w/2 - 10*u), y = VH*spot[1] + Math.sin(t*.8)*4*u - (1 - vanish)*16*u;
+  ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(.7 + .3*pop, .7 + .3*pop);
+  ctx.shadowColor = 'rgba(255,220,170,.35)'; ctx.shadowBlur = 16*u;
+  ctx.fillStyle = 'rgba(244,237,223,.24)'; ctx.strokeStyle = 'rgba(255,246,226,.5)'; ctx.lineWidth = 1.4*u;
+  ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.ellipse(-w*.2, -h*.36, w*.2, h*.42, 0, 0, Math.PI*2); ctx.ellipse(w*.14, -h*.42, w*.24, h*.46, 0, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(-w*.32, h*.72, 4*u, 0, Math.PI*2); ctx.arc(-w*.38, h*1.05, 2.4*u, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#FFF8E8'; ctx.shadowColor = 'rgba(20,12,30,.6)'; ctx.shadowBlur = 6*u; ctx.fillText(text, 0, 1);
+  ctx.restore();
+}
 function drawMenuScene(){
   const M = menuStatic(), u = M.u, t = S.time, P = MENU_PTR;
   P.x += (P.tx - P.x)*.04; P.y += (P.ty - P.y)*.04;
@@ -733,6 +801,7 @@ function drawMenuScene(){
   for (let i = 0; i < 4; i++){ const w = (180 + i*60)*u, x = ((t*(4 + i*2)*u + i*VW*.37) % (VW + w*2)) - w, y = VH*(.12 + i*.07);
     ctx.fillStyle = `rgba(${180 - i*10},${160 - i*8},${210 - i*6},${.1 + i*.02})`; ctx.beginPath();
     for (let k = 0; k < 5; k++) ctx.ellipse(x + k*w/5, y - Math.sin(k/4*Math.PI)*14*u, w/4, 14*u, 0, 0, Math.PI*2); ctx.fill(); }
+  drawThoughts(u, t);
   ctx.drawImage(M.far, px(4), py(4));
   // медленный тёплый луч маяка
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -822,7 +891,6 @@ function render(){
   for (const m of S.W.movers) drawMover(m);
   for (const lp of S.W.lamps) if (lp.x > S.cam.x - 120 && lp.x < S.cam.x + VW + 120) drawLamp(lp);
   if (S.W.door) drawDoor(S.W.door);
-  if (!S.scene && SET.hints && S.mode !== 'title') for (const h of S.W.hints) drawHint(h);
   for (const d of S.W.drops) drawDrop(d);
   for (const f of S.W.finds) drawFind(f);
   for (const k of S.W.kl) drawShade(k);
@@ -844,6 +912,7 @@ function render(){
   if (S.white > 0){ ctx.fillStyle = `rgba(16,12,28,${S.white})`; ctx.fillRect(0, 0, VW, VH);
     if (S.mode === 'faint'){ ctx.font = `italic 500 24px ${SERIF}`; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(244,230,200,${S.white})`; ctx.fillText('Ая переводит дух у фонаря…', VW/2, VH/2); } }
   if (S.mode !== 'title' && S.mode !== 'card' && !S.scene) withHud(drawHUD);
+  if (S.mode === 'play') withHud(drawHintBanner);
   if (S.scene) renderVN();
   if (S.mode === 'card') drawCard();
   if (G1.paused){ ctx.fillStyle = 'rgba(12,10,22,.45)'; ctx.fillRect(0, 0, VW, VH); }

@@ -28,25 +28,6 @@ function showMenu(){
   $('mChInfo').textContent = `Открыто ${open} из ${CHAPTERS.length}`;
   setMusic(true, 'menu');
 }
-// Фразы жителей под названием в меню — сменяются сами (без спойлеров)
-const MENU_QUOTES = [
-  ['Фонари сами не гаснут.', 'так говорят в городе'],
-  ['Бесплатно гадаю только по праздникам, сегодня скидка!', 'Мико'],
-  ['Масло проверяй, а не ворон считай.', 'Тимофей'],
-  ['Курлы.', 'Генерал'],
-  ['Вешка, не лезь в фонарь!', 'Черри'],
-  ['Огниво не потеряй!', 'Тимофей'],
-  ['Мгла была всегда. Сколько себя помню — была.', 'горожанин'],
-  ['Карты не врут. Они преувеличивают.', 'Мико'],
-  ['Генерал — благородная птица с тонкой душевной организацией!', 'Мико'],
-  ['Ли-ла!', 'болтунчик']
-];
-let quoteI = Math.floor(Math.random()*MENU_QUOTES.length);
-function nextQuote(){
-  const el = $('mQuote'); if (!el) return; el.style.opacity = 0;
-  setTimeout(() => { const [q, who] = MENU_QUOTES[quoteI = (quoteI + 1) % MENU_QUOTES.length]; el.innerHTML = `«${q}» <span>— ${who}</span>`; el.style.opacity = 1; }, 600);
-}
-nextQuote(); setInterval(() => { if (!$('title').hidden) nextQuote(); }, 7000);
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }
 function closePause(){ hideScreens(); G1.paused = false; jumpQueued = false; advanceQueued = false; }
 function askConfirm(text, yesLabel, onYes, from){ confirmFrom = from; confirmYes = onYes; $('cText').textContent = text; $('cYes').textContent = yesLabel; showScreen('confirm'); }
@@ -273,7 +254,7 @@ function toggleFS(){ const st = document.documentElement; try { if (document.ful
 $('fsbtn').addEventListener('click', e => { e.currentTarget.blur(); toggleFS(); });
 if (!document.fullscreenEnabled) $('fsbtn').style.display = 'none';
 
-/* ================= Вступление «Х представляет» ================= */
+/* ================= Вступление «Ночной Кот представляет» ================= */
 let splashOn = true;
 function endSplash(){ if (!splashOn) return; splashOn = false; $('splash').classList.add('out'); setTimeout(() => $('splash').hidden = true, 600); audio(); }
 $('splash').addEventListener('pointerdown', endSplash);
@@ -342,7 +323,7 @@ function tgInit(){
   hapticHook = ms => { try { tg.HapticFeedback.impactOccurred(ms > 50 ? 'heavy' : ms > 22 ? 'medium' : ms > 10 ? 'light' : 'soft'); } catch(e){} };
   storeHook = (k, v) => { if (SYNC.includes(k)) cloudSet(k, v); };
   const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-  if (u && u.first_name){ $('hello').textContent = `Привет, ${u.first_name}! Прогресс сохраняется в Telegram.`; $('hello').hidden = false; }
+  if (u && u.first_name){ $('spHello').textContent = `Привет, ${u.first_name}! Твой прогресс сохраняется в Telegram.`; $('spHello').hidden = false; } // приветствие — на заставке
   if (deviceIsTouch()) $('fsbtn').style.display = 'none';
   try { ['viewportChanged','fullscreenChanged','safeAreaChanged','contentSafeAreaChanged'].forEach(ev => tg.onEvent(ev, fitStage)); } catch(e){}
   tgFullscreen(); fitStage(); cloudMerge(); setInterval(tgSync, 250);

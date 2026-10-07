@@ -270,3 +270,31 @@ body.touchui .kbwrap{display:none}
 .stage.short .emblem{width:30px; margin:0 0 .35em}
 .stage.short .mquote{min-height:0; margin-top:.6em}
 @media (prefers-reduced-motion: reduce){ .emblem, .emblem .flame, .logo h1, .screen.menu .logo, #mainNav .mbtn{animation:none !important} }
+
+.sphello{margin:1.1em 0 0 !important; font:700 clamp(13px,2vmin,17px) var(--sans) !important; font-style:normal !important; color:#F8D592 !important; letter-spacing:.02em}
+.sphello[hidden]{display:none}
+
+/* ---------- Главное меню, версия 2: логотип и кнопки одним столбцом слева, справа открыта сцена ---------- */
+.screen.menu, .stage.short .screen.menu{background:linear-gradient(90deg, rgba(8,8,20,.92) 0%, rgba(8,8,20,.72) 32%, rgba(8,8,20,.25) 55%, rgba(8,8,20,0) 70%)}
+.menuwrap, .stage.short .menuwrap{flex-direction:column; align-items:stretch; justify-content:center; width:min(440px, 52%); gap:clamp(12px,2.2cqw,26px); padding:clamp(16px,4cqw,56px) clamp(16px,4.5cqw,60px)}
+.logo, .stage.short .logo{display:grid; grid-template-columns:auto 1fr; column-gap:clamp(10px,1.4cqw,16px); align-items:center; max-width:none; flex:none}
+.logo .emblem, .stage.short .emblem{grid-row:1; width:clamp(30px,3.8cqw,46px); margin:0}
+.logo .ltext{grid-row:1; min-width:0}
+.logo .ch{margin:0 0 .35em; font:800 clamp(9px,1.05cqw,12px) var(--sans); letter-spacing:.3em}
+.logo h1{margin:0; display:flex; flex-direction:column; line-height:1; animation:none; text-shadow:none}
+.logo h1 .t1{font:800 clamp(13px,1.7cqw,20px) var(--sans); letter-spacing:.55em; text-transform:uppercase; color:#EDE3D2; margin:0 0 .25em .05em}
+.logo h1 .t2{font:700 clamp(24px,4.1cqw,50px)/1.02 var(--serif); white-space:nowrap;
+  background:linear-gradient(180deg, #FFF6DC 0%, #FBD58E 55%, #E8823A 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(20,12,24,.85)) drop-shadow(0 0 18px rgba(247,150,60,.45)); animation:titleGlow2 5s ease-in-out infinite}
+@keyframes titleGlow2{0%,100%{filter:drop-shadow(0 2px 0 rgba(20,12,24,.85)) drop-shadow(0 0 14px rgba(247,150,60,.35))} 50%{filter:drop-shadow(0 2px 0 rgba(20,12,24,.85)) drop-shadow(0 0 24px rgba(247,170,80,.6))}}
+.ldiv{grid-column:1 / -1; display:flex; align-items:center; gap:10px; margin:clamp(8px,1.2cqw,14px) 0 0}
+.ldiv span{flex:1; height:1px; background:linear-gradient(90deg, rgba(242,180,90,0), rgba(242,180,90,.7), rgba(242,180,90,0))}
+.ldiv i{width:8px; height:8px; transform:rotate(45deg); background:#F2B45A; box-shadow:0 0 10px rgba(242,180,90,.8)}
+#mainNav, .stage.short #mainNav{width:100%; max-width:360px}
+.stage.short .mbtn{padding-top:.42em; padding-bottom:.42em}
+.logo h1 .t2{font-size:clamp(22px,3.5cqw,46px); white-space:normal}
+.menuwrap, .stage.short .menuwrap{width:min(470px, 56%)}
+#about .panel{max-height:calc(100% - 20px); overflow-y:auto}
+.stage.short #about .ph{margin-bottom:.3em}
+.stage.short #about .lead{font-size:13px; line-height:1.4; margin:.3em 0}
+.stage.short #about .credits{margin:.5em 0 .7em}
