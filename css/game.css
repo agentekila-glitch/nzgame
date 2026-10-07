@@ -129,7 +129,7 @@ button:focus-visible{outline:3px solid var(--amber); outline-offset:2px}
 .stage.short .screen.menu{background:linear-gradient(90deg, rgba(8,8,20,.86) 0%, rgba(8,8,20,.55) 50%, rgba(8,8,20,.86) 100%)}
 
 /* ---------- Главы ---------- */
-.chlist{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin:0 0 1em}
+.chlist{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin:0 0 1em; max-height:min(58vh, 440px); overflow-y:auto; padding:2px}
 .chcard{display:flex; flex-direction:column; gap:3px; align-items:flex-start; text-align:left; padding:.9em 1em; border:0; border-radius:14px; cursor:pointer;
   background:rgba(244,237,223,.07); box-shadow:inset 0 0 0 1.5px rgba(244,237,223,.14); color:#EDE3D2}
 .chcard small{font:800 11px var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--amber)}
@@ -137,6 +137,7 @@ button:focus-visible{outline:3px solid var(--amber); outline-offset:2px}
 .chcard span{font:500 italic clamp(12px,1.3cqw,14px) var(--serif); color:#BFB2A0}
 .chcard:hover:not(:disabled){box-shadow:inset 0 0 0 1.5px rgba(242,180,90,.6); background:rgba(244,237,223,.12)}
 .chcard.locked{opacity:.45; cursor:default}
+.chcard.done small{color:#9FD8A0}
 
 /* ---------- Настройки ---------- */
 .panel.sett{width:min(640px,100%); text-align:left}
@@ -217,3 +218,55 @@ body.fit .srow{padding:.75em 0}
 body.fit .panel.card{max-height:100%; overflow:auto}
 body.touchui .kbwrap{display:none}
 @media (prefers-reduced-motion: reduce){ .dlg.on{animation:none} .dlg .nx{animation:none} .stage.tcedit .tb{animation:none} }
+.stage.short .chlist{grid-template-columns:repeat(3, 1fr); gap:8px; max-height:52vh}
+.stage.short .chcard{padding:.55em .75em}
+.stage.short #chapters .ph{margin:0 0 .4em}
+
+/* Экран «Играть» и «Персонажи» */
+.stage.short .panel .mnav{width:min(320px,100%)}
+.charlist{display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:10px; margin:0 0 1em; max-height:min(58vh, 460px); overflow-y:auto; padding:2px}
+.charcard{display:flex; flex-direction:column; align-items:center; gap:2px; padding:.6em .5em .7em; border:0; border-radius:14px; cursor:pointer; background:rgba(244,237,223,.07); color:var(--paper, #F4EDDF); box-shadow:inset 0 0 0 1px rgba(244,237,223,.12); text-align:center}
+.charcard canvas{width:84px; height:84px; border-radius:50%; background:radial-gradient(circle at 50% 40%, rgba(242,180,90,.25), rgba(30,24,50,.6) 70%)}
+.charcard b{font:700 clamp(14px,1.6cqw,17px) var(--serif)}
+.charcard small{font:500 italic 11px var(--serif); color:#BFB2A0; line-height:1.2}
+.charcard:hover{box-shadow:inset 0 0 0 1.5px rgba(242,180,90,.6); background:rgba(244,237,223,.12)}
+.charcard.locked b{color:#8E8498}
+.charinfo{display:grid; grid-template-columns:minmax(150px, 38%) 1fr; gap:16px; align-items:start; margin:0 0 1em; max-height:min(60vh, 480px); overflow-y:auto}
+.charinfo .bioportrait{width:100%; aspect-ratio:3/4; border-radius:14px; background:radial-gradient(circle at 50% 35%, rgba(242,180,90,.22), rgba(30,24,50,.55) 75%)}
+.biotext h3{margin:0 0 .15em; font:700 clamp(20px,2.4cqw,26px) var(--serif)}
+.biometa{margin:0 0 .7em; font:800 11px var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--amber)}
+.biotext ul{margin:0; padding-left:1.1em}
+.biotext li{margin:0 0 .55em; font:500 clamp(13px,1.45cqw,15px)/1.45 var(--serif)}
+.bioteaser{font:500 italic clamp(13px,1.45cqw,15px)/1.45 var(--serif)}
+.biolock{font:500 clamp(12px,1.3cqw,14px)/1.45 var(--serif); color:#BFB2A0}
+.stage.short .charlist{grid-template-columns:repeat(5, 1fr); max-height:46vh; gap:8px}
+.stage.short .charcard canvas{width:62px; height:62px}
+.stage.short .charinfo{max-height:56vh; grid-template-columns:150px 1fr}
+.charcard canvas, .charinfo canvas{position:static; display:block; inset:auto; transform:none}
+.charlist[hidden], .charinfo[hidden]{display:none}
+.biotext{text-align:left}
+
+/* Главное меню: эмблема-фонарик, иконки, плавное появление, фразы жителей */
+.emblem{width:clamp(26px,3.4cqw,40px); margin:0 0 .5em; animation:flick 3.2s ease-in-out infinite}
+.emblem svg{display:block; width:100%; height:auto}
+.emblem .flame{animation:flame 1.6s ease-in-out infinite; transform-origin:20px 32px}
+@keyframes flick{0%,100%{filter:drop-shadow(0 0 8px rgba(255,190,110,.7))} 50%{filter:drop-shadow(0 0 18px rgba(255,190,110,.95))}}
+@keyframes flame{0%,100%{transform:scale(1,1)} 50%{transform:scale(.92,1.06)}}
+.logo h1{animation:titleGlow 5s ease-in-out infinite}
+@keyframes titleGlow{0%,100%{text-shadow:0 4px 30px rgba(247,150,60,.32)} 50%{text-shadow:0 4px 38px rgba(247,170,80,.55)}}
+.mquote{margin:.9em 0 0; max-width:30em; min-height:2.8em; font:500 italic clamp(12px,1.4cqw,15px)/1.4 var(--serif); color:#D9CCB6; transition:opacity .6s}
+.mquote span{font:700 normal clamp(10px,1.1cqw,12px) var(--sans); color:#A79DB4; letter-spacing:.04em; white-space:nowrap}
+#mainNav .mbtn{padding-left:2.9em}
+.mbtn .ic{position:absolute; left:1.05em; top:50%; width:1.15em; height:1.15em; transform:translateY(-50%); color:var(--amber); opacity:.9}
+.mbtn .ic svg{display:block; width:100%; height:100%}
+.mbtn.primary .ic{color:#5A3A1E}
+.screen.menu:not([hidden]) .logo{animation:mIn .9s ease backwards}
+.screen.menu:not([hidden]) #mainNav .mbtn{animation:mIn .55s ease backwards}
+.screen.menu:not([hidden]) #mainNav .mbtn:nth-child(1){animation-delay:.15s}
+.screen.menu:not([hidden]) #mainNav .mbtn:nth-child(2){animation-delay:.25s}
+.screen.menu:not([hidden]) #mainNav .mbtn:nth-child(3){animation-delay:.35s}
+.screen.menu:not([hidden]) #mainNav .mbtn:nth-child(4){animation-delay:.45s}
+@keyframes mIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+.stage.short .emblem{width:30px; margin:0 0 .35em}
+.stage.short .mquote{min-height:0; margin-top:.6em}
+@media (prefers-reduced-motion: reduce){ .emblem, .emblem .flame, .logo h1, .screen.menu .logo, #mainNav .mbtn{animation:none !important} }

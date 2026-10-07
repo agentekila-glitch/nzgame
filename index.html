@@ -6,8 +6,8 @@
 <title>Город гаснущих фонарей</title>
 <meta name="description" content="Повесть-платформер о фонарщице Ае и городе над туманом. Играй прямо в Telegram.">
 <script id="tgsdk" async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/fonts.css?v=0.2.5">
-<link rel="stylesheet" href="css/game.css?v=0.2.5">
+<link rel="stylesheet" href="css/fonts.css?v=0.3.5">
+<link rel="stylesheet" href="css/game.css?v=0.3.5">
 </head>
 <body>
 <div class="splash" id="splash">
@@ -58,20 +58,41 @@
     <div class="screen menu" id="title">
       <div class="menuwrap">
         <div class="logo">
+          <div class="emblem" aria-hidden="true"><svg viewBox="0 0 40 58"><path d="M20 2l10 8H10z" fill="#3A2C40"/><rect x="11" y="10" width="18" height="4" rx="1.5" fill="#3A2C40"/><path d="M12.5 14h15l-2.2 25h-10.6z" fill="#FFD48A" stroke="#2B2233" stroke-width="2"/><path class="flame" d="M20 19.5c3.4 4.2 3.4 9 0 13.4-3.4-4.4-3.4-9.2 0-13.4z" fill="#FFF8E6"/><rect x="18" y="39" width="4" height="17" rx="1" fill="#3A2C40"/></svg></div>
           <p class="ch">Повесть о фонарщице</p>
           <h1>Город<br>гаснущих фонарей</h1>
           <p class="hello" id="hello" hidden></p>
+          <p class="mquote" id="mQuote"></p>
         </div>
         <nav class="mnav" id="mainNav">
-          <button id="mContinue" class="mbtn primary" hidden><span>Продолжить</span><small id="mContInfo"></small></button>
-          <button id="mNew" class="mbtn"><span>Новая игра</span></button>
-          <button id="mChapters" class="mbtn" hidden><span>Главы</span></button>
-          <button id="mJournal" class="mbtn"><span>Журнал</span></button>
-          <button id="mSettings" class="mbtn"><span>Настройки</span></button>
-          <button id="mAbout" class="mbtn"><span>Об игре</span></button>
+          <button id="mPlay" class="mbtn primary"><i class="ic"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg></i><span>Играть</span><small id="mPlayInfo"></small></button>
+          <button id="mChars" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.3c3 .2 5.5 2.4 5.5 5.7"/></svg></i><span>Персонажи</span></button>
+          <button id="mSettings" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></i><span>Настройки</span></button>
+          <button id="mAbout" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.6v.2"/></svg></i><span>Об игре</span></button>
         </nav>
       </div>
       <div class="ver" id="ver"></div>
+    </div>
+
+    <div class="screen" id="play" hidden>
+      <div class="panel card small">
+        <h2 class="ph">Играть</h2>
+        <nav class="mnav center">
+          <button id="mContinue" class="mbtn primary" hidden><span>Продолжить</span><small id="mContInfo"></small></button>
+          <button id="mNew" class="mbtn"><span>Новая игра</span><small>С самого начала, с пролога</small></button>
+          <button id="mChapters" class="mbtn"><span>Выбрать главу</span><small id="mChInfo"></small></button>
+        </nav>
+        <div class="row"><button class="ghost" id="playBack">Назад</button></div>
+      </div>
+    </div>
+
+    <div class="screen" id="chars" hidden>
+      <div class="panel card wide">
+        <h2 class="ph">Персонажи</h2>
+        <div class="charlist" id="charList"></div>
+        <div class="charinfo" id="charInfo" hidden></div>
+        <div class="row"><button class="ghost" id="charsBack">Назад</button></div>
+      </div>
     </div>
 
     <div class="screen" id="chapters" hidden>
@@ -161,7 +182,7 @@
           <div><b id="stTime">0:00</b>в пути</div>
         </div>
         <div class="note" id="endNote"></div>
-        <p class="sub final" id="endFinal" hidden>Конец первой части. Продолжение следует.</p>
+        <p class="sub final" id="endFinal" hidden></p>
         <div class="row"><button class="ghost" id="endMenu">Главное меню</button><button class="big" id="endNext">Дальше</button></div>
       </div>
     </div>
@@ -169,13 +190,15 @@
   <p class="hint">Город гаснущих фонарей · Автор: Х · <span>управление: стрелки / A D, прыжок — пробел</span></p>
 </div>
 
-<script src="js/core.js?v=0.2.5"></script>
-<script src="js/characters.js?v=0.2.5"></script>
-<script src="js/engine.js?v=0.2.5"></script>
-<script src="js/render.js?v=0.2.5"></script>
-<script src="chapters/prologue.js?v=0.2.5"></script>
-<script src="chapters/ch1.js?v=0.2.5"></script>
-<script src="chapters/ch2.js?v=0.2.5"></script>
-<script src="chapters/ch3.js?v=0.2.5"></script>
-<script src="js/ui.js?v=0.2.5"></script>
+<script src="js/core.js?v=0.3.5"></script>
+<script src="js/characters.js?v=0.3.5"></script>
+<script src="js/engine.js?v=0.3.5"></script>
+<script src="js/render.js?v=0.3.5"></script>
+<script src="chapters/prologue.js?v=0.3.5"></script>
+<script src="chapters/ch1.js?v=0.3.5"></script>
+<script src="chapters/ch2.js?v=0.3.5"></script>
+<script src="chapters/ch3.js?v=0.3.5"></script>
+<script src="chapters/ch4.js?v=0.3.5"></script>
+<script src="js/bios.js?v=0.3.5"></script>
+<script src="js/ui.js?v=0.3.5"></script>
 </body></html>

@@ -3,7 +3,7 @@
    Город гаснущих фонарей — ядро: утилиты, настройки, ввод, звук.
    Все файлы игры — обычные <script>, общие переменные видны между ними.
    ===================================================================== */
-const VERSION = 'Бета 0.2.5';
+const VERSION = 'Бета 0.3.2';
 const $ = id => document.getElementById(id);
 const T = 32; let VW = 960, VH = 540;     // VW/VH подстраиваются под экран телефона в fitStage()
 let HUD = {t:0, r:0, b:0, l:0};          // отступы HUD от кнопок Telegram/выреза, в единицах кадра
@@ -152,7 +152,13 @@ const MODES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,
 // theme — узнаваемая мелодия трека на 2 такта (ступени лада: 0-9, a=10 … f=15), звучит в начале каждой секции A.
 // bell — у мелодии призвук колокольчика, oct — сдвиг аккомпанемента на октавы.
 const TRACKS = {
-  // Главное меню: музыкальная шкатулка, вальс
+  // Главное меню: тихая колыбельная — музыкальная шкатулка, мягкий фон, без ударных
+  menu:{ bpm:56, meter:12, root:60, mode:'major', prog:[0,5,3,4], progB:[3,0,4,0], form:'AABC',
+    pad:{w:'sine', v:.011, lp:700},
+    bass:{pat:'0...........', w:'sine', v:.03, len:10},
+    arp:{pat:'0...2...4...', w:'sine', v:.011, len:3.5, oct:2, bell:1},
+    lead:{w:'sine', v:.024, bell:1, lo:7, hi:13, theme:'9---b---9---c-----b---9-', rh:['x---x---x---', 'x-----x-----', 'x-------x---', '......x---x-']} },
+  // Экран итогов главы: музыкальная шкатулка, вальс
   title:{ bpm:66, meter:12, root:55, mode:'major', prog:[0,5,3,4], progB:[5,3,0,4], form:'AABC',
     pad:{w:'sine', v:.008, lp:900},
     bass:{pat:'0.....2.....', w:'sine', v:.04, len:5},
@@ -210,7 +216,20 @@ const TRACKS = {
     bass:{pat:'0.......0...2...', w:'triangle', v:.055, lp:700, len:3},
     arp:{pat:'0.1.2.4.2.4.6.4.', w:'triangle', v:.013, len:1.5},
     lead:{w:'triangle', v:.03, bell:1, lo:7, hi:15, theme:'7-9-b---e---d-b-c-----a-8-------', rh:['x---x-x-x-------', 'x-x-x---x---x---', 'x-----x-x-x-x---']},
-    perc:'k...b.......b...' }
+    perc:'k...b.......b...' },
+  // Глава 4: праздник Большого фонаря — весёлая полька с гармошкой
+  fest:{ bpm:118, root:57, mode:'major', prog:[0,3,4,0], progB:[5,3,4,4], form:'AABA',
+    bass:{pat:'0...2...0...2...', w:'triangle', v:.055, lp:700, len:1.6},
+    arp:{pat:'..12..12..12..12', w:'triangle', v:.012, lp:2400, len:.8},
+    lead:{w:'sawtooth', v:.014, lp:1700, det:11, lo:7, hi:14, theme:'b-9-b-e---d-c-b-a-c-e-c-a---....', rh:['x-x-x---x-x-x---', 'x.x.x-x-x---x---', 'x---x-x-x-x-x-x-']},
+    perc:'k...s...k.k.s...' },
+  // Глава 4: нижние улицы — сыро, пусто, где-то в тумане звонит колокол
+  deep:{ bpm:62, root:50, mode:'phryg', prog:[0,1,0,6], progB:[5,1,0,0], form:'AAB',
+    pad:{w:'sine', v:.012, lp:700},
+    bass:{pat:'0...............', w:'sine', v:.045, len:14},
+    arp:{pat:'0.......2.......', w:'sine', v:.012, len:5, oct:2, bell:1},
+    lead:{w:'sine', v:.022, bell:1, lo:5, hi:12, theme:'7-------8---7---9-------8-------', rh:['x-------x-------', '........x---x---', 'x---x-----------']},
+    perc:'g...............' }
 };
 const M = {name:'', step:0, next:0, phrase:null};
 let mBus = null;
@@ -238,6 +257,7 @@ function mVoice(f, t0, d, o){
 }
 function mPerc(kind, t0){
   if (kind === 'k'){ mVoice(110, t0, .26, {w:'sine', v:.08, a:.003, to:42}); return; }
+  if (kind === 'g'){ for (const [m, v, d] of [[1, .03, 3], [2.76, .012, 1.8], [5.4, .006, .9]]) mVoice(147*m, t0, d, {w:'sine', v, a:.004}); return; } // далёкий колокол
   const P = {h:['highpass',7000,.05,.016], s:['bandpass',1800,.16,.035], t:['bandpass',3800,.03,.03], b:['bandpass',2500,.1,.015]}[kind]; if (!P) return;
   const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
   s.buffer = noiseBuf; f.type = P[0]; f.frequency.value = P[1]; g.gain.setValueAtTime(P[3]*(.8 + Math.random()*.4), t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + P[2]);

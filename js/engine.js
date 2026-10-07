@@ -74,6 +74,7 @@ function parseWorld(ch){
   }
   W.lamps.sort((a,b) => a.x - b.x);
   if (W.lamps.length && !ch.lampsStartOut) W.lamps[0].lit = true;
+  if (ch.litBefore) for (const lp of W.lamps) if (lp.x < ch.litBefore*T) lp.lit = true;
   for (const n of W.npcs){ n.t = Math.random()*5; n.sayT = 0; n.say = ''; n.state = 'idle'; n.vx = 0; n.alpha = n.hidden ? 0 : 1; n.phase = 0; }
   return W;
 }
@@ -223,8 +224,9 @@ function updatePlayer(dt){
   }
   // фонари
   for (const lp of S.W.lamps){
+    if (lp.lit && !lp.cp && Math.abs(p.x + p.w/2 - lp.x) < 36 && Math.abs(p.y + p.h - lp.y) < 60){ lp.cp = true; p.checkpoint = {x:lp.x - 12, y:lp.y - p.h}; }
     if (!lp.lit && !lp.locked && Math.abs(p.x + p.w/2 - lp.x) < 36 && Math.abs(p.y + p.h - lp.y) < 60){
-      lp.lit = true; lp.glow = 1; p.checkpoint = {x:lp.x - 12, y:lp.y - p.h}; sfx.lamp();
+      lp.lit = true; lp.cp = true; lp.glow = 1; p.checkpoint = {x:lp.x - 12, y:lp.y - p.h}; sfx.lamp();
       embers(lp.x, lp.y - 70, 16);
       floatText(lp.x, lp.y - 104, 'Фонарь горит', '#FFE3A8'); saveGame();
       const ch = curCh(); if (ch.onLamp) ch.onLamp(S.W.lamps.indexOf(lp));
@@ -285,7 +287,9 @@ function updateWorld(dt, interact){
   const v = S.V; v.t += dt;
   const ax = npc('axel'), near = ax && !ax.hidden && ax.alpha > .5 && Math.abs(ax.x - (p.x + p.w/2)) < 260;
   v.scared = approach(v.scared, near ? 1 : 0, dt*2);
-  const behind = 26 + v.scared*6, tx = p.x + p.w/2 - p.face*behind + Math.sin(v.t*1.7)*8*(1 - v.scared), ty = p.y - 18 + v.scared*22 + Math.sin(v.t*2.6)*6*(1 - v.scared*.7);
+  const behind = 26 + v.scared*6, aw = v.away;
+  const tx = aw ? aw.x + Math.sin(v.t*3)*4 : p.x + p.w/2 - p.face*behind + Math.sin(v.t*1.7)*8*(1 - v.scared);
+  const ty = aw ? aw.y + Math.sin(v.t*2)*6 : p.y - 18 + v.scared*22 + Math.sin(v.t*2.6)*6*(1 - v.scared*.7);
   v.vx += ((tx - v.x)*26 - v.vx*7) * dt; v.vy += ((ty - v.y)*26 - v.vy*7) * dt; v.x += v.vx*dt; v.y += v.vy*dt;
   if (Math.random() < .25 && !v.hidden) S.particles.push({x:v.x, y:v.y + 6, vx:rnd(-10,10), vy:rnd(-30,-10), life:.6, t:0, c:'rgba(255,190,110,.8)', s:2, g:-20, kind:'dot'});
 }
@@ -399,6 +403,8 @@ function updateWave(dt){
 const JKEY = 'nz.journal.v2';
 const Journal = {
   data: (() => { try { return JSON.parse(store.get(JKEY) || '') || null; } catch(e){ return null; } })() || {order:[], scenes:{}},
+  // имя Странника в игре не называется — чистим записи старых версий
+  clean(){ for (const k in this.data.scenes) for (const L of this.data.scenes[k].lines){ if (L.n === 'Аксель') L.n = 'Странник'; if (L.t) L.t = L.t.replace(/Аксел(ь|я|ю|ем|е)/g, (m, e) => 'Странник' + ({'ь':'', 'я':'а', 'ю':'у', 'ем':'ом', 'е':'е'}[e])); } },
   save(){ store.set(JKEY, JSON.stringify(this.data)); },
   add(chIndex, name, i){
     const ch = CHAPTERS[chIndex], def = ch.scenes[name], key = ch.id + ':' + name, d = this.data;
@@ -408,7 +414,7 @@ const Journal = {
     this.save();
   },
   render(){
-    const el = $('jlist'); el.innerHTML = '';
+    this.clean(); const el = $('jlist'); el.innerHTML = '';
     if (!this.data.order.length){ el.innerHTML = '<p class="empty">Пока здесь пусто. Все разговоры, которые ты услышишь или пропустишь, запишутся сюда.</p>'; return; }
     for (const id of this.data.order){ const rec = this.data.scenes[id];
       const h = document.createElement('p'); h.className = 'sc'; h.textContent = `${rec.ch} · ${rec.title}`; el.appendChild(h);
@@ -591,6 +597,7 @@ function startCard(){ S.mode = 'card'; S.cardT = 0; $('dlg').classList.remove('o
 function afterCard(){ const ch = curCh(); S.mode = 'play'; if (ch.startScene) startScene(ch.startScene); if (ch.onPlay) ch.onPlay(); }
 function chapterComplete(){
   const ch = curCh(); S.mode = 'end'; S.noSave = true;
+  { const p = readProgress(); p.done = [...new Set([...(p.done || []), ch.id])]; store.set(PKEY, JSON.stringify(p)); } // пройденные главы открывают биографии
   const next = S.ch + 1;
   if (next < CHAPTERS.length){ unlock(next); store.set(SKEY, JSON.stringify({v:2, ch:next, lamp:0, lit:[], finds:[], drops:[], flags:{fresh:1}, play:0, faints:0, t:Date.now()})); }
   else store.set(SKEY, 'null');
@@ -617,6 +624,7 @@ const api = {
   chase(cfg){ startChase(cfg); }, mist(o){ startMist(o); setMusic(true, 'escape'); },
   openExit(){ S.flags.exitOpen = true; }, complete(){ chapterComplete(); },
   music(m){ setMusic(true, m); }, flag(k, v=true){ S.flags[k] = v; },
+  iskraTo(c, r){ S.V.away = {x:c*T + 16, y:r*T}; }, iskraBack(){ S.V.away = null; },
   checkpoint(c, r){ S.P.checkpoint = {x:c*T, y:r*T - S.P.h}; S.checkpointOverride = {x:c*T, y:r*T - S.P.h}; },
   card(){ startCard(); },
   // тень вылезает из тумана: c — колонка, s — ряд поверхности, на которой она встанет

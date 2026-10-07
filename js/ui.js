@@ -2,7 +2,9 @@
 /* =====================================================================
    Интерфейс: вступление, меню, настройки, управление, Telegram, раскладка, цикл.
    ===================================================================== */
-const SCREENS = ['title','pause','settings','about','end','confirm','chapters'];
+const SCREENS = ['title','pause','settings','about','end','confirm','chapters','play','chars'];
+// куда ведёт «Назад» с каждого экрана меню
+const BACK_TO = {about:'title', play:'title', chars:'title', chapters:'play'};
 let settingsFrom = 'title', confirmFrom = 'title', confirmYes = null;
 function hideScreens(){ for (const id of SCREENS) $(id).hidden = true; $('stage').classList.remove('inmenu'); }
 const menuOpen = () => SCREENS.some(id => !$(id).hidden) || journalOpen || tcEditing;
@@ -19,10 +21,31 @@ function showMenu(){
   journalOpen = false; $('journal').hidden = true;
   showScreen('title');
   $('mContinue').hidden = !d;
-  if (d){ const ch = CHAPTERS[d.ch]; $('mContInfo').textContent = `${ch.label}. ${ch.title}${d.play ? ' · ' + Math.max(1, Math.round(d.play/60)) + ' мин' : ''}`; }
-  $('mChapters').hidden = prog.unlocked < 1;
-  setMusic(true, 'title');
+  const info = d ? `${CHAPTERS[d.ch].label}. ${CHAPTERS[d.ch].title}` : '';
+  if (d) $('mContInfo').textContent = info + (d.play ? ' · ' + Math.max(1, Math.round(d.play/60)) + ' мин' : '');
+  $('mPlayInfo').textContent = d ? 'Продолжить: ' + info : 'Начать историю';
+  const open = Math.min(prog.unlocked, CHAPTERS.length - 1) + 1;
+  $('mChInfo').textContent = `Открыто ${open} из ${CHAPTERS.length}`;
+  setMusic(true, 'menu');
 }
+// Фразы жителей под названием в меню — сменяются сами (без спойлеров)
+const MENU_QUOTES = [
+  ['Фонари сами не гаснут.', 'так говорят в городе'],
+  ['Будущее бесплатно. Чай — нет.', 'Мико'],
+  ['Колено. К дождю.', 'Тимофей'],
+  ['Курлы.', 'Генерал'],
+  ['Вешка, не лезь в фонарь!', 'Черри'],
+  ['Под ноги смотри, не на звёзды.', 'Тимофей'],
+  ['Мгла была всегда. Сколько себя помню — была.', 'горожанин'],
+  ['Карты не врут. Они преувеличивают.', 'Мико'],
+  ['Ли-ла!', 'болтунчик']
+];
+let quoteI = Math.floor(Math.random()*MENU_QUOTES.length);
+function nextQuote(){
+  const el = $('mQuote'); if (!el) return; el.style.opacity = 0;
+  setTimeout(() => { const [q, who] = MENU_QUOTES[quoteI = (quoteI + 1) % MENU_QUOTES.length]; el.innerHTML = `«${q}» <span>— ${who}</span>`; el.style.opacity = 1; }, 600);
+}
+nextQuote(); setInterval(() => { if (!$('title').hidden) nextQuote(); }, 7000);
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }
 function closePause(){ hideScreens(); G1.paused = false; jumpQueued = false; advanceQueued = false; }
 function askConfirm(text, yesLabel, onYes, from){ confirmFrom = from; confirmYes = onYes; $('cText').textContent = text; $('cYes').textContent = yesLabel; showScreen('confirm'); }
@@ -30,23 +53,29 @@ $('cYes').addEventListener('click', () => { const f = confirmYes; confirmYes = n
 $('cNo').addEventListener('click', () => showScreen(confirmFrom));
 $('mNew').addEventListener('click', () => {
   const go = () => { store.set(SKEY, 'null'); startChapter(0); };
-  if (readSave()) askConfirm('Начать заново? Текущее сохранение будет заменено. Открытые главы останутся.', 'Начать заново', go, 'title'); else go();
+  if (readSave()) askConfirm('Начать заново? Текущее сохранение будет заменено. Открытые главы и персонажи останутся.', 'Начать заново', go, 'play'); else go();
 });
 $('mContinue').addEventListener('click', () => { const d = readSave(); if (d && d.flags && d.flags.fresh) startChapter(d.ch); else loadGame(); });
 $('mChapters').addEventListener('click', () => { renderChapters(); showScreen('chapters'); });
-$('mJournal').addEventListener('click', () => openJournal());
+$('mPlay').addEventListener('click', () => showScreen('play'));
+$('playBack').addEventListener('click', () => showScreen('title'));
+$('mChars').addEventListener('click', () => { renderChars(); showScreen('chars'); });
+$('charsBack').addEventListener('click', () => { if (!$('charInfo').hidden) renderChars(); else showScreen('title'); });
 $('mSettings').addEventListener('click', () => openSettings('title'));
 $('mAbout').addEventListener('click', () => showScreen('about'));
 $('aBack').addEventListener('click', () => showScreen('title'));
-$('chBack').addEventListener('click', () => showScreen('title'));
+$('chBack').addEventListener('click', () => showScreen('play'));
 $('aWipe').addEventListener('click', () => askConfirm('Стереть весь прогресс, открытые главы и журнал? Это нельзя отменить.', 'Стереть', () => {
   store.set(SKEY, 'null'); store.set(PKEY, JSON.stringify({unlocked:0})); store.set(JKEY, ''); Journal.data = {order:[], scenes:{}}; toast('Прогресс стёрт'); showMenu(); }, 'about'));
 function renderChapters(){
+  // Глава открывается, когда пройдена предыдущая. Закрытые видно, но выбрать нельзя.
   const el = $('chList'), prog = readProgress(); el.innerHTML = '';
   CHAPTERS.forEach((ch, i) => {
-    const b = document.createElement('button'); b.className = 'chcard' + (i > prog.unlocked ? ' locked' : '');
-    b.innerHTML = `<small>${ch.label}</small><b>${i > prog.unlocked ? '???' : ch.title}</b><span>${i > prog.unlocked ? 'Ещё не открыта' : ch.sub}</span>`;
-    b.disabled = i > prog.unlocked;
+    const open = i <= prog.unlocked, done = chapterDone(ch.id), prev = CHAPTERS[i - 1];
+    const b = document.createElement('button'); b.className = 'chcard' + (open ? '' : ' locked') + (done ? ' done' : '');
+    const why = i - 1 === prog.unlocked ? `Пройди «${prev.title}», чтобы открыть` : 'Сначала пройди предыдущие главы';
+    b.innerHTML = `<small>${ch.label}${done ? ' · пройдена ✓' : ''}</small><b>${open ? ch.title : '🔒 Закрыта'}</b><span>${open ? ch.sub : why}</span>`;
+    b.disabled = !open;
     b.addEventListener('click', () => askConfirm(`Начать «${ch.title}» с начала? Текущее сохранение будет заменено.`, 'Играть', () => startChapter(i), 'chapters'));
     el.appendChild(b);
   });
@@ -70,7 +99,7 @@ function showEnd(){
   $('stDrops').textContent = S.drops; $('stFaint').textContent = S.faints; $('stTime').textContent = fmtTime(S.play);
   $('endNote').innerHTML = ch.endNote || ''; $('endNote').hidden = !ch.endNote;
   $('endNext').textContent = last ? 'В главное меню' : `Дальше: ${CHAPTERS[S.ch + 1].title}`;
-  $('endFinal').hidden = !last;
+  const fin = last ? 'Продолжение следует.' : (ch.partEnd || ''); $('endFinal').textContent = fin; $('endFinal').hidden = !fin;
   showScreen('end');
 }
 $('endNext').addEventListener('click', () => { if (S.ch >= CHAPTERS.length - 1) showMenu(); else startChapter(S.ch + 1); });
@@ -221,7 +250,7 @@ addEventListener('keydown', e => {
       const i = list.indexOf(document.activeElement), n = e.code === 'ArrowDown' ? 1 : -1;
       const next = list[(i + n + list.length) % list.length]; if (next){ next.focus(); sfx.blip(); } e.preventDefault();
     }
-    if (e.code === 'Escape'){ if (open === 'pause') closePause(); else if (open === 'settings') closeSettings(); else if (open === 'about' || open === 'chapters') showScreen('title'); else if (open === 'confirm') showScreen(confirmFrom); }
+    if (e.code === 'Escape'){ if (open === 'pause') closePause(); else if (open === 'settings') closeSettings(); else if (open === 'chars' && !$('charInfo').hidden) renderChars(); else if (BACK_TO[open]) showScreen(BACK_TO[open]); else if (open === 'confirm') showScreen(confirmFrom); }
     return;
   }
   if (isKey('pause', e.code) && S){ if (S.scene && e.code === 'Escape') skipScene(); else if (S.mode === 'play') openPause(); }
@@ -290,7 +319,8 @@ function tgBack(){
   if (journalOpen){ closeJournal(); return; }
   if (!$('settings').hidden){ closeSettings(); return; }
   if (!$('confirm').hidden){ showScreen(confirmFrom); return; }
-  if (!$('about').hidden || !$('chapters').hidden){ showScreen('title'); return; }
+  if (!$('chars').hidden && !$('charInfo').hidden){ renderChars(); return; }
+  for (const id in BACK_TO) if (!$(id).hidden){ showScreen(BACK_TO[id]); return; }
   if (!$('pause').hidden){ closePause(); return; }
   if (S && S.scene){ skipScene(); return; }
   if (S && S.mode === 'play'){ openPause(); return; }
@@ -369,6 +399,7 @@ function uiTick(){
 /* ================= Запуск ================= */
 $('ver').textContent = VERSION; $('aboutVer').textContent = VERSION;
 $('sVer').textContent = VERSION;
+if (Journal.data.scenes['ch3:beacon'] && CHAPTERS.length > 4) unlock(4);
 showMenu();
 if (!tgInit()){ const s = document.getElementById('tgsdk'); if (s) s.addEventListener('load', tgInit); }
 fitStage();

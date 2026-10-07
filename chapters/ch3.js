@@ -6,6 +6,7 @@ chapter({
   id:'ch3', label:'Глава 3', kicker:'ГЛАВА 3', title:'Маяк над облаками', sub:'Тот, кто молчит, держит слово',
   theme:'sky', music:'sky', cols:256, rows:26, find:'seed', canDouble:true, startScene:'terraces',
   endSub:'Большой фонарь горит. Мгла ушла вниз. Но кое-кто ещё вернётся.',
+  partEnd:'Конец первой части. Дальше — часть вторая.',
   endNote:'<b>Перчатка на перилах маяка</b><br>Сломанный знак фонарщиков. С обратной стороны мелко выцарапано: «Слово держу. — А.»',
   build(h){
     const F = h.FLOOR; h.walls();
