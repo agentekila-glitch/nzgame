@@ -56,7 +56,8 @@ function renderChapters(){
     if (ch.group && ch.partNo > 1) return; // остальные участки главы в списке не показываем
     const open = i <= prog.unlocked, done = chapterDone(ch.group || ch.id), prev = CHAPTERS[i - 1], title = ch.groupTitle || ch.title;
     const b = document.createElement('button'); b.className = 'chcard' + (open ? '' : ' locked') + (done ? ' done' : '');
-    const why = i - 1 === prog.unlocked ? `Пройди «${prev.groupTitle || prev.title}», чтобы открыть этот этап` : 'Сначала пройди предыдущие главы';
+    const pc = prev && CHAPTERS.find(c => c.group ? c.group === prev.group && c.partNo === 1 : c === prev); // карточка предыдущей главы
+    const why = pc && pc.index <= prog.unlocked ? `Пройди «${prev.groupTitle || prev.title}», чтобы открыть этот этап` : 'Сначала пройди предыдущие главы';
     b.innerHTML = `<small>${ch.label}${done ? ' · ✓ Пройдена' : ''}</small><b>${open ? title : '🔒 Закрыто'}</b><span>${open ? (ch.groupSub || ch.sub) : why}</span>`;
     b.disabled = !open;
     b.addEventListener('click', () => askConfirm(`Перепройти «${title}»? Прогресс внутри текущей главы сбросится до её начала.`, 'Играть', () => startChapter(i), 'chapters'));

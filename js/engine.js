@@ -587,7 +587,13 @@ function update(dt){
    nz.progress: {unlocked} — до какой главы открыт доступ (не стирается «Новой игрой») */
 const SKEY = 'nz.save.v2', PKEY = 'nz.progress';
 function readSave(){ try { const d = JSON.parse(store.get(SKEY) || 'null'); return d && d.v === 2 ? d : null; } catch(e){ return null; } }
-function readProgress(){ try { return JSON.parse(store.get(PKEY) || 'null') || {unlocked:0}; } catch(e){ return {unlocked:0}; } }
+function readProgress(){
+  let p; try { p = JSON.parse(store.get(PKEY) || 'null') || {unlocked:0}; } catch(e){ p = {unlocked:0}; }
+  // Глава, пройденная, когда она была последней, не могла открыть следующую — её тогда ещё не было.
+  // Поэтому каждая пройденная глава (или участок) открывает следующую.
+  for (const id of p.done || []){ const i = CHAPTERS.findIndex(c => c.id === id); if (i >= 0) p.unlocked = Math.max(p.unlocked || 0, Math.min(i + 1, CHAPTERS.length - 1)); }
+  return p;
+}
 function unlock(i){ const p = readProgress(); if (i > p.unlocked){ p.unlocked = Math.min(i, CHAPTERS.length - 1); store.set(PKEY, JSON.stringify(p)); } }
 function saveGame(silent){
   if (!S || S.mode === 'title' || S.noSave) return;
