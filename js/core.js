@@ -3,7 +3,7 @@
    Город гаснущих фонарей — ядро: утилиты, настройки, ввод, звук.
    Все файлы игры — обычные <script>, общие переменные видны между ними.
    ===================================================================== */
-const VERSION = 'Бета 0.3.3';
+const VERSION = 'Бета 0.4';
 const $ = id => document.getElementById(id);
 const T = 32; let VW = 960, VH = 540;     // VW/VH подстраиваются под экран телефона в fitStage()
 let HUD = {t:0, r:0, b:0, l:0};          // отступы HUD от кнопок Telegram/выреза, в единицах кадра
@@ -37,15 +37,15 @@ const KEY_DEF = {
   left:['ArrowLeft','KeyA'], right:['ArrowRight','KeyD'], jump:['Space','ArrowUp'], down:['ArrowDown','KeyS'],
   sprint:['ShiftLeft','ShiftRight'], pause:['Escape','KeyP'], journal:['KeyJ','']
 };
-const ACTIONS = [['left','Влево'],['right','Вправо'],['jump','Прыжок'],['down','Вниз / спрыгнуть'],['sprint','Бег'],['pause','Пауза'],['journal','Журнал']];
+const ACTIONS = [['left','Движение влево'],['right','Движение вправо'],['jump','Прыжок'],['down','Спрыгнуть вниз'],['sprint','Ускорение (Бег)'],['pause','Пауза'],['journal','Журнал']];
 const SET_DEF = {music:.7, sfx:.8, text:'normal', auto:false, shake:true, vibro:true, assist:true, hints:true,
   touchUI:'auto', tcSize:1, tcAlpha:.55, tcLayout:'std', tcPos:null, keys:null};
 const SET = Object.assign({}, SET_DEF, (() => { try { return JSON.parse(store.get('nz.settings') || '{}'); } catch(e){ return {}; } })());
 function keyMap(){ const k = {}; for (const a in KEY_DEF) k[a] = (SET.keys && SET.keys[a]) ? SET.keys[a].slice(0, 2) : KEY_DEF[a].slice(); return k; }
 let KEYS = keyMap();
 function saveSettings(){ store.set('nz.settings', JSON.stringify(SET)); KEYS = keyMap(); applyVolumes(); }
-const KEY_NAMES = {Space:'Пробел', ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓', ShiftLeft:'Shift', ShiftRight:'Shift (пр.)',
-  ControlLeft:'Ctrl', ControlRight:'Ctrl (пр.)', AltLeft:'Alt', AltRight:'Alt (пр.)', Enter:'Enter', Escape:'Esc', Tab:'Tab', Backspace:'⌫',
+const KEY_NAMES = {Space:'Пробел', ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓', ShiftLeft:'Shift', ShiftRight:'Пр. Shift',
+  ControlLeft:'Ctrl', ControlRight:'Пр. Ctrl', AltLeft:'Alt', AltRight:'Пр. Alt', Enter:'Enter', Escape:'Esc', Tab:'Tab', Backspace:'⌫',
   Semicolon:';', Quote:"'", Comma:',', Period:'.', Slash:'/', BracketLeft:'[', BracketRight:']', Backslash:'\\', Minus:'-', Equal:'=', Backquote:'`'};
 function keyName(code){
   if (!code) return '—';
@@ -144,7 +144,8 @@ const sfx = {
    собирается на ходу вокруг узнаваемой темы трека — поэтому одно и то же место не звучит дважды одинаково.
    Форма трека: секции по 8 тактов. A — основная, B — другая гармония, C — затишье (без мелодии и ударных). */
 const BPM = 84, BEAT = 60/BPM;
-let musicOn = false, musicMood = 'calm';
+let musicOn = false, musicMood = 'calm', musicNext = null, musicSwapAt = 0, musicCalls = 0;
+const curMood = () => musicNext || musicMood; // какой трек играет или вот-вот заиграет
 const MODES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], lydian:[0,2,4,6,7,9,11],
   penta:[0,2,4,7,9], hminor:[0,2,3,5,7,8,11], phryg:[0,1,3,5,7,8,10] };
 // Узоры: один символ — одна шестнадцатая. Цифра — тон аккорда (0 основной, 1 терция, 2 квинта, 3 септима, 4+ — то же октавой выше).
@@ -184,13 +185,47 @@ const TRACKS = {
     arp:{pat:'0124012401240124', w:'square', v:.009, lp:2600, len:.8},
     lead:{w:'sawtooth', v:.016, lp:2400, lo:7, hi:14, theme:'e-b-9-b-e-b-c-b-c-a-c-e-d---b---', rh:['x-x-x-x-x---x-x-', 'x---x---x-x-x---', 'x.x.x.x.x-x-x-..']},
     perc:'k.h.s.h.k.k.s.hh' },
-  // Поднимается Мгла — тревожный пульс
-  escape:{ bpm:116, root:57, mode:'phryg', prog:[0,1,0,6], progB:[5,1,0,0], form:'AAB',
-    pad:{w:'sawtooth', v:.008, lp:700},
-    bass:{pat:'0..0..0.0..0..0.', w:'sawtooth', v:.05, lp:400, len:1.5},
-    arp:{pat:'0.1.2.1.0.1.4.1.', w:'square', v:.008, lp:1800, len:1},
-    lead:{w:'sawtooth', v:.012, lp:1200, det:14, lo:7, hi:12, theme:'7-------8-------7-------b---8---', rh:['x-------x-------', 'x---x---x-------', '........x---x---']},
-    perc:'k..k..k.k..k..s.' },
+  // Поднимается Мгла — тяжёлый гул, сердцебиение, нисходящий полутон: что-то надвигается
+  mist:{ bpm:84, root:45, mode:'phryg', prog:[0,1,0,1], progB:[5,6,1,0], form:'AAB',
+    pad:{w:'sawtooth', v:.011, lp:480},
+    bass:{pat:'0.......0.......', w:'sawtooth', v:.06, lp:300, len:7},
+    arp:{pat:'0101010101010101', w:'triangle', v:.006, lp:1200, len:.5},
+    lead:{w:'sawtooth', v:.013, lp:900, det:18, lo:3, hi:9, theme:'7-------8-------7-------6-------', rh:['x-------x-------', '........x---x---', 'x---------------']},
+    perc:'k.k.....k.k.....' },
+  // Свет гаснет сам — тихая неправильная шкатулка, редкие капли звука
+  eerie:{ bpm:64, root:52, mode:'phryg', prog:[0,1,5,1], progB:[6,1,0,0], form:'AAB',
+    pad:{w:'sine', v:.012, lp:600},
+    bass:{pat:'0...............', w:'sine', v:.04, len:14},
+    arp:{pat:'0.....3.....1...', w:'sine', v:.012, len:3, oct:2, bell:1},
+    lead:{w:'sine', v:.022, bell:1, lo:5, hi:11, theme:'7---8---7-------6---7-----------', rh:['x-------x-------', '....x-------x---', 'x---------------']},
+    perc:'..............t.' },
+  // Смешные перепалки: Мико, Черри, Жуля, Гиса — пружинистое умпа-умпа
+  funny:{ bpm:132, root:55, mode:'major', prog:[0,4,0,4], progB:[3,4,1,4], form:'AABA', swing:.1,
+    bass:{pat:'0...2...0...2...', w:'triangle', v:.06, lp:800, len:.8},
+    arp:{pat:'..1...1...1...1.', w:'square', v:.008, lp:2000, len:.4},
+    lead:{w:'square', v:.014, lp:3000, lo:7, hi:15, theme:'7.9.b.9.7.....4.7.9.b.c.e.c.b...', rh:['x.x.x...x.x.x...', 'x...x.x.x-x-....', 'x.x.x.x.x...x...']},
+    perc:'k...b.b.k...b...' },
+  // Тёплые разговоры: дом, дед, Марта, друзья — перебор гитары
+  warm:{ bpm:76, root:53, mode:'major', prog:[0,2,3,4], progB:[5,3,1,4], form:'AABA',
+    pad:{w:'triangle', v:.008, lp:1000},
+    bass:{pat:'0.......4.......', w:'sine', v:.045, len:6},
+    arp:{pat:'0.2.4.2.0.2.4.2.', w:'triangle', v:.012, lp:2400, len:1.2},
+    lead:{w:'triangle', v:.028, lo:7, hi:14, theme:'9-b-c---b-9-7---9-b-c-e-c-------', rh:['x---x-x-x-------', 'x-x-x---x---x---', 'x-------x-x-x---']},
+    perc:'....b.......b...' },
+  // Загадка: Странник и всё, чего Ая не понимает
+  mystery:{ bpm:70, root:50, mode:'dorian', prog:[0,3,0,6], progB:[2,6,5,0], form:'AABC',
+    pad:{w:'sine', v:.01, lp:900},
+    bass:{pat:'0...........0...', w:'sine', v:.045, len:10},
+    arp:{pat:'0.2.4.6.4.2.0...', w:'triangle', v:.011, lp:2200, len:2},
+    lead:{w:'sine', v:.024, bell:1, lo:6, hi:13, theme:'b---c---a-------9---b---8-------', rh:['x---x---x-------', '....x---x---x---', 'x-----x---------']},
+    perc:'......t.........' },
+  // Столкновение: Вран, ссора с дедом — остинато струнных
+  tense:{ bpm:96, root:52, mode:'hminor', prog:[0,5,0,4], progB:[3,5,4,4], form:'AAB',
+    pad:{w:'sawtooth', v:.007, lp:800},
+    bass:{pat:'0.0.0.0.0.0.0.0.', w:'sawtooth', v:.04, lp:450, len:.8},
+    arp:{pat:'0...1...2...1...', w:'square', v:.007, lp:1600, len:1},
+    lead:{w:'sawtooth', v:.013, lp:1600, det:9, lo:7, hi:13, theme:'7---7---8---7---b-------a---9---', rh:['x---x---x-------', 'x-x-x---x---x---', 'x-------x-x-x-x-']},
+    perc:'k.......k.k.....' },
   // Глава 2: Часовая башня — пиццикато и тиканье
   clock:{ bpm:108, root:53, mode:'dorian', prog:[0,3,0,6], progB:[2,6,3,4], form:'AABAC',
     pad:{w:'triangle', v:.005, lp:900},
@@ -229,7 +264,54 @@ const TRACKS = {
     bass:{pat:'0...............', w:'sine', v:.045, len:14},
     arp:{pat:'0.......2.......', w:'sine', v:.012, len:5, oct:2, bell:1},
     lead:{w:'sine', v:.022, bell:1, lo:5, hi:12, theme:'7-------8---7---9-------8-------', rh:['x-------x-------', '........x---x---', 'x---x-----------']},
-    perc:'g...............' }
+    perc:'g...............' },
+  // ===== Глава 5 =====
+  // Нижние улицы утром: одинокая виолончель, гулкое эхо, капли
+  ancient_streets:{ bpm:58, root:43, mode:'dorian', prog:[0,3,0,6], progB:[5,3,6,0], form:'AABC',
+    pad:{w:'sine', v:.009, lp:600},
+    bass:{pat:'0...............', w:'sine', v:.04, len:14},
+    arp:{pat:'........2.......', w:'sine', v:.008, len:4, oct:2, bell:1},
+    lead:{w:'sawtooth', v:.02, lp:900, det:6, lo:5, hi:12, theme:'7-------9---a---b-----------9---', rh:['x-------x-------', 'x---x-------x---', '........x-------']},
+    perc:'d.......d...d...' },
+  // Мгла зовёт: низкий вибрирующий гул и далёкий металлический перезвон
+  mist_calling:{ bpm:54, root:41, mode:'phryg', prog:[0,1,0,1], progB:[6,1,0,0], form:'AAB',
+    pad:{w:'sawtooth', v:.012, lp:380},
+    bass:{pat:'0...............', w:'sine', v:.06, len:15},
+    arp:{pat:'....4.......3...', w:'sine', v:.01, len:3, oct:3, bell:1},
+    lead:{w:'sine', v:.016, bell:1, lo:7, hi:13, theme:'b-------c-------b---------------', rh:['x---------------', '........x-------']},
+    perc:'g.......' + '........' },
+  // Суд Совета: отрывистое пиццикато, капающий ритм, нарастающие духовые
+  council_tension:{ bpm:92, root:50, mode:'hminor', prog:[0,0,5,4], progB:[3,5,4,4], form:'AAB',
+    pad:{w:'sawtooth', v:.009, lp:1100},
+    bass:{pat:'0.0.....0.0.....', w:'triangle', v:.05, lp:600, len:.6},
+    arp:{pat:'0.2.4.2.0.2.4.2.', w:'triangle', v:.016, lp:2600, len:.35},
+    lead:{w:'sawtooth', v:.012, lp:1400, det:10, lo:7, hi:13, theme:'7---7---8---9---a-------9---8---', rh:['x---x---x-------', 'x-------x-x-----', 'x---x---x---x---']},
+    perc:'d...d.d.k...d...' },
+  // Архив: тикают часы, глухой бас, шорох бумаги
+  archive_stealth:{ bpm:84, root:48, mode:'minor', prog:[0,5,0,6], progB:[3,6,4,4], form:'AABC',
+    pad:{w:'sine', v:.007, lp:700},
+    bass:{pat:'0.......0...2...', w:'triangle', v:.045, lp:400, len:2},
+    arp:{pat:'..2...2...2...4.', w:'triangle', v:.008, lp:1800, len:.4},
+    lead:{w:'square', v:.009, lp:1600, lo:7, hi:12, theme:'7.8.7.....b.a...7.8.7.....a.9...', rh:['x.x.x.....x.x...', 'x...x...x.......', '....x.x.x.......']},
+    perc:'t...t...t.h.t...' },
+  // Тепло и воспоминания: пианино и гармонь
+  emotional_warm:{ bpm:72, root:53, mode:'major', prog:[0,5,3,4], progB:[3,4,0,0], form:'AABA', swing:.08,
+    pad:{w:'sawtooth', v:.006, lp:900},
+    bass:{pat:'0.......4.......', w:'sine', v:.045, len:6},
+    arp:{pat:'0.2.4.2.0.2.4.2.', w:'triangle', v:.015, lp:2600, len:1.4},
+    lead:{w:'sawtooth', v:.012, lp:1500, det:12, lo:7, hi:14, theme:'9---b---c---e-------c---b-------', rh:['x---x---x-------', 'x-x-x---x---x---', 'x-------x-x-x---']} },
+  // Узнавание: тишина и одинокие аккорды фортепиано
+  dramatic_realization:{ bpm:48, root:50, mode:'minor', prog:[0,5,3,4], progB:[5,3,0,0], form:'AB',
+    bass:{pat:'0...............', w:'triangle', v:.05, lp:900, len:14},
+    arp:{pat:'0.2.4...........', w:'triangle', v:.022, lp:2400, len:10},
+    lead:{w:'triangle', v:.026, lp:2200, lo:7, hi:13, theme:'b---------------9---------------', rh:['x---------------', '........x-------']} },
+  // Обещание: торжественная и грустная тема виолончели и скрипки
+  heroic_melancholy:{ bpm:66, root:45, mode:'minor', prog:[0,5,2,6], progB:[3,4,5,4], form:'AABA',
+    pad:{w:'sawtooth', v:.012, lp:1000},
+    bass:{pat:'0.......0.......', w:'sawtooth', v:.04, lp:500, len:7},
+    arp:{pat:'0...2...4...2...', w:'triangle', v:.012, lp:2000, len:3},
+    lead:{w:'sawtooth', v:.02, lp:1800, det:8, lo:7, hi:15, theme:'7-------b-------e---d---c---b---', rh:['x-------x-------', 'x---x---x-------', 'x-----x-x-------']},
+    perc:'k...............' }
 };
 const M = {name:'', step:0, next:0, phrase:null};
 let mBus = null;
@@ -257,6 +339,7 @@ function mVoice(f, t0, d, o){
 }
 function mPerc(kind, t0){
   if (kind === 'k'){ mVoice(110, t0, .26, {w:'sine', v:.08, a:.003, to:42}); return; }
+  if (kind === 'd'){ mVoice(1500 + Math.random()*500, t0, .1, {w:'sine', v:.016, a:.002, to:700}); return; } // капля
   if (kind === 'g'){ for (const [m, v, d] of [[1, .03, 3], [2.76, .012, 1.8], [5.4, .006, .9]]) mVoice(147*m, t0, d, {w:'sine', v, a:.004}); return; } // далёкий колокол
   const P = {h:['highpass',7000,.05,.016], s:['bandpass',1800,.16,.035], t:['bandpass',3800,.03,.03], b:['bandpass',2500,.1,.015]}[kind]; if (!P) return;
   const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
@@ -308,6 +391,7 @@ function mStep(tr, n, t, sd){
 }
 function musicTick(){
   if (!musicOn || !AC || muted) return;
+  if (musicNext && AC.currentTime >= musicSwapAt){ musicMood = musicNext; musicNext = null; }
   const tr = TRACKS[musicMood] || TRACKS.calm, now = AC.currentTime, sd = 60/tr.bpm/4;
   if (M.name !== musicMood){ M.name = musicMood; M.step = 0; M.phrase = null; M.next = Math.max(M.next, now + .15);
     musicBus().del.delayTime.setValueAtTime(sd*3, now); }
@@ -317,10 +401,23 @@ function musicTick(){
     M.next += tr.swing ? sd*(M.step % 2 ? 1 - tr.swing : 1 + tr.swing) : sd; M.step++;
   }
 }
-function setMusic(on, mood){ musicOn = on; if (mood) musicMood = mood; const ac = audio(); if (!ac) return;
-  musicGain.gain.cancelScheduledValues(ac.currentTime); musicGain.gain.setValueAtTime(musicGain.gain.value, ac.currentTime);
-  musicGain.gain.linearRampToValueAtTime(on ? 1.25*SET.music : 0, ac.currentTime + 1.2); }
-function applyVolumes(){ if (!AC) return; sfxGain.gain.value = SET.sfx; if (musicOn) musicGain.gain.setValueAtTime(1.25*SET.music, AC.currentTime); }
+// Смена трека — не рывком: старый затихает, новый вступает с начала своей темы.
+let musicVol = 1;
+function setMusic(on, mood, v=1){
+  musicCalls++; const was = musicOn; musicOn = on; musicVol = v; const ac = audio();
+  if (!ac){ if (mood){ musicMood = mood; musicNext = null; } return; }
+  const t = ac.currentTime, g = musicGain.gain, vol = on ? 1.25*SET.music*v : 0;
+  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+  if (mood && mood !== curMood() && on && was && M.name){ musicNext = mood; musicSwapAt = t + .6; g.linearRampToValueAtTime(.0001, t + .6); g.linearRampToValueAtTime(vol, t + 1.8); }
+  else { if (mood && mood !== curMood()){ musicMood = mood; musicNext = null; } g.linearRampToValueAtTime(vol, t + 1.2); }
+}
+function applyVolumes(){ if (!AC) return; sfxGain.gain.value = SET.sfx; if (musicOn) musicGain.gain.setValueAtTime(1.25*SET.music*musicVol, AC.currentTime); }
+// Резкая тишина (как в кино): музыка обрывается сразу
+function musicCut(){ musicCalls++; musicOn = false; const ac = audio(); if (!ac) return; const g = musicGain.gain, t = ac.currentTime;
+  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + .06); }
+// Плавное нарастание громкости текущего трека
+function musicSwell(v, sec){ musicCalls++; musicVol = v; const ac = audio(); if (!ac || !musicOn) return; const g = musicGain.gain, t = ac.currentTime;
+  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(1.25*SET.music*v, t + sec); }
 function toggleMute(){ muted = !muted; store.set('nz.mute', muted ? '1' : '0'); $('mute').textContent = muted ? '✕' : '♪';
   if (AC){ master.gain.value = muted ? 0 : .9; } if (!muted){ audio(); if (master) master.gain.value = .9; } }
 

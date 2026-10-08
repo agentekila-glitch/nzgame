@@ -228,13 +228,78 @@ const THEMES = {
         ctx.beginPath(); ctx.moveTo(x, y + 30); ctx.lineTo(x, y); ctx.lineTo(x + w/2, y - 26 - (i % 2)*10); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + 30); ctx.closePath(); ctx.fill(); }
       ctx.restore();
     }
+  },
+  // Глава 5, утро: нижние улицы старше города — мокрый камень, лучи света сквозь щели мостовой, капли
+  lower:{
+    floats:'dust', vignette:'rgba(4,10,18,.62)', stone:['#4E5A5E','#445054','#3B464A','#323C40','#2A3337'], edge:'curb', spike:'metal',
+    sky(){
+      const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#0C141C'); g.addColorStop(.6, '#15222C'); g.addColorStop(1, '#22343E');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; // утренние лучи сквозь щели мостовой наверху
+      for (let i=0;i<6;i++){ const x = ((i*260 - S.cam.x*.25) % (VW + 400) + VW + 400) % (VW + 400) - 200, a = .05 + .03*Math.sin(S.time*.4 + i);
+        const lg = ctx.createLinearGradient(x, 0, x + 120, VH); lg.addColorStop(0, `rgba(255,236,190,${a*2})`); lg.addColorStop(1, 'rgba(255,236,190,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 26, 0); ctx.lineTo(x + 170, VH); ctx.lineTo(x + 90, VH); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    },
+    layers(W, R){
+      const [w1, h1] = layerSize(.18, W), L1 = mk(w1, h1), a = L1.getContext('2d');
+      for (let x=-40;x<w1;x+=180 + R()*60){ const w = 120 + R()*40, top = h1*.35 + R()*h1*.1; a.fillStyle = '#132028'; a.fillRect(x, top, w, h1);
+        a.fillStyle = '#0C161C'; a.beginPath(); a.arc(x + w/2, h1*.78, w*.32, Math.PI, 0); a.lineTo(x + w/2 + w*.32, h1); a.lineTo(x + w/2 - w*.32, h1); a.fill(); }
+      const [w2, h2] = layerSize(.42, W), L2 = mk(w2, h2), b = L2.getContext('2d');
+      for (let x=-20;x<w2;){ const w = 80 + R()*110, hh = 140 + R()*200, base = h2*.85; b.fillStyle = R() < .5 ? '#1A2A32' : '#1E2E36'; b.fillRect(x, base - hh, w, hh + 200);
+        b.fillStyle = '#243840'; b.beginPath(); b.moveTo(x - 8, base - hh); b.lineTo(x + w/2, base - hh - 30 - R()*20); b.lineTo(x + w + 8, base - hh); b.fill();
+        for (let y=base - hh + 24; y < base - 20; y += 40) for (let xx=x+14; xx < x + w - 20; xx += 30){ b.fillStyle = 'rgba(8,14,18,.85)'; b.fillRect(xx, y, 12, 18); }
+        b.fillStyle = 'rgba(140,180,200,.12)'; for (let i=0;i<3;i++) b.fillRect(x + R()*w, base - hh, 2, hh); // подтёки
+        x += w + 8 + R()*20; }
+      const [w3, h3] = layerSize(.7, W), L3 = mk(w3, h3), d = L3.getContext('2d');
+      for (let x=60;x<w3;x+=260 + R()*240){ d.strokeStyle = '#0A1216'; d.lineWidth = 4; d.beginPath(); d.moveTo(x, 0); d.lineTo(x + R()*16 - 8, h3*.3 + R()*h3*.25); d.stroke(); // цепи и трубы
+        d.fillStyle = '#0A1216'; d.fillRect(x - 10, 0, 20 + R()*60, 10); }
+      return [{img:L1, par:.18}, {img:L2, par:.42}, {img:L3, par:.7}];
+    },
+    back(){ for (let i=0;i<16;i++){ const x = (hash(i,4,4) % 1000)/1000*VW, y = ((S.time*60 + i*67) % VH); ctx.fillStyle = 'rgba(170,210,230,.22)'; ctx.fillRect(x, y, 1.2, 8); }
+      if (Math.random() < .012) sfx.drip(); },
+    over(){ const base = VH - (S.cam.y - (LH - VH))*.25;
+      const g = ctx.createLinearGradient(0, base - 220, 0, base + 20); g.addColorStop(0, 'rgba(100,140,170,0)'); g.addColorStop(1, 'rgba(100,140,170,.35)');
+      ctx.fillStyle = g; ctx.fillRect(0, base - 220, VW, 240); }
+  },
+  // Глава 5, полдень: Дом гильдии — мраморные залы, витражи, а дальше пыльный архив со стеллажами
+  guild:{
+    floats:'dust', vignette:'rgba(18,10,14,.55)', stone:['#C2B8AC','#B0A69A','#9C9288','#867E76','#706A64'], edge:'brass', spike:'metal',
+    sky(){
+      const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#2A1E26'); g.addColorStop(.6, '#3A2A30'); g.addColorStop(1, '#4A3638');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let i=0;i<12;i++){ const x = ((i*120 - S.cam.x*.06) % (VW + 120) + VW + 120) % (VW + 120) - 60; ctx.fillRect(x, 0, 3, VH); }
+    },
+    layers(W, R){
+      const [w2, h2] = layerSize(.42, W), L2 = mk(w2, h2), b = L2.getContext('2d');
+      for (let x=60;x<w2;x+=300 + R()*80){ const y = h2*.12, w = 110, hh = h2*.55; // витражные окна
+        b.fillStyle = '#1A1218'; b.beginPath(); b.moveTo(x - 8, y + hh); b.lineTo(x - 8, y + 55); b.arc(x + w/2, y + 55, w/2 + 8, Math.PI, 0); b.lineTo(x + w + 8, y + hh); b.fill();
+        b.save(); b.beginPath(); b.moveTo(x, y + hh); b.lineTo(x, y + 55); b.arc(x + w/2, y + 55, w/2, Math.PI, 0); b.lineTo(x + w, y + hh); b.closePath(); b.clip();
+        const cols = ['rgba(240,160,80,.5)','rgba(110,160,230,.45)','rgba(200,90,110,.45)','rgba(150,210,150,.4)'];
+        for (let yy = y; yy < y + hh; yy += 22) for (let xx = x; xx < x + w; xx += 22){ b.fillStyle = cols[hash(xx|0, yy|0, 2) % 4]; b.fillRect(xx, yy, 21, 21); }
+        b.restore(); glowOn(b, x + w/2, y + hh*.5, 160, 'rgba(255,220,170,A)', .12); }
+      const [w3, h3] = layerSize(.7, W), L3 = mk(w3, h3), d = L3.getContext('2d');
+      for (let x=0;x<w3;x+=220 + R()*60){ d.fillStyle = '#5A4E4A'; d.fillRect(x, 0, 34, h3); d.fillStyle = 'rgba(255,240,220,.12)'; d.fillRect(x + 4, 0, 5, h3); // колонны
+        d.fillStyle = '#4A3E3A'; d.fillRect(x - 8, h3*.06, 50, 16); }
+      for (let x=140;x<w3;x+=520 + R()*200){ const y = h3*.12; d.fillStyle = '#6A2A34'; d.fillRect(x, y, 60, 150); d.beginPath(); d.moveTo(x, y + 150); d.lineTo(x + 30, y + 176); d.lineTo(x + 60, y + 150); d.fill(); // знамёна
+        d.fillStyle = '#D9B24A'; d.beginPath(); d.arc(x + 30, y + 60, 14, 0, Math.PI*2); d.fill(); }
+      return [{img:L2, par:.42}, {img:L3, par:.7}];
+    },
+    over(){ const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, 'rgba(255,220,170,.05)'); g.addColorStop(1, 'rgba(0,0,0,.12)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); }
   }
 };
+// Глава 5, вечер: закат над террасами, который постепенно остывает в голубой свет Мглы
+THEMES.dusk = Object.assign({}, THEMES.sky, {
+  over(){ const k = S.flags.calling ? 1 : clamp((S.P.x/T - 200)/180, 0, .55);
+    ctx.fillStyle = `rgba(40,70,140,${.38*k})`; ctx.fillRect(0, 0, VW, VH);
+    const g = ctx.createLinearGradient(0, VH*.5, 0, VH); g.addColorStop(0, 'rgba(130,180,240,0)'); g.addColorStop(1, `rgba(130,180,240,${.3*k})`); ctx.fillStyle = g; ctx.fillRect(0, VH*.5, VW, VH*.5); }
+});
 const FIND_KINDS = {
   letter:{one:'Письмо', many:'Письма Черри'},
-  boltik:{one:'Болтунчик', many:'Болтунчики'},
-  seed:{one:'Семечко', many:'Семена Марты'},
-  plaque:{one:'Табличка', many:'Таблички деда'}
+  boltik:{one:'Болтунчик', many:'Болтунчики Гисы'},
+  seed:{one:'Семечко', many:'Светящиеся семена'},
+  plaque:{one:'Табличка', many:'Памятные засечки'},
+  past:{one:'Находка', many:'Следы прошлого'}
 };
 
 /* ================= Предрисованные слои ================= */
@@ -386,7 +451,7 @@ function drawDrop(d){
   const fg = ctx.createLinearGradient(d.x, y - 9, d.x, y + 7); fg.addColorStop(0, '#FFF2C4'); fg.addColorStop(1, '#F7963C'); ctx.fillStyle = fg; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = INK; ctx.stroke();
 }
 function drawFind(f){
-  if (f.got) return; const x = f.x, y = f.y, b = Math.sin(f.t*3)*3, kind = curCh().find;
+  if (f.got) return; if (f.icon){ drawFindIcon(f); return; } const x = f.x, y = f.y, b = Math.sin(f.t*3)*3, kind = curCh().find;
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 20, 44, 'rgba(255,240,200,A)', .3); ctx.restore();
   if (kind === 'boltik'){ drawBoltik(ctx, x, y, f.t, 1.15, Math.sin(f.t*.7) > 0 ? 1 : -1, 0); return; }
   ctx.save(); ctx.translate(x, y - 22 + b);
@@ -448,6 +513,10 @@ function drawDoor(d){
 }
 function drawMover(m){
   const x = m.x, y = m.y, w = m.w, clock = theme() === THEMES.clock;
+  if (m.shelf){ ctx.fillStyle = '#5A3A24'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = '#7A5634'; ctx.fillRect(x, y, w, 3); ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2);
+    for (let xx = x + 4; xx < x + w - 8; xx += 9){ const hh = 12 + (hash(xx|0, 1, 7) % 8); ctx.fillStyle = ['#7A3A2A','#3A5A6A','#8A7A3A','#4A3A5A'][hash(xx|0, 2, 5) % 4]; ctx.fillRect(xx, y - hh, 7, hh); }
+    if (m.k < 1 && m.target === 0){ ctx.save(); ctx.globalAlpha = .22; ctx.strokeStyle = '#E8C66A'; ctx.setLineDash([4, 8]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.x0 + w/2, m.y0 + 6); ctx.lineTo(m.x1 + w/2, m.y1 + 6); ctx.stroke(); ctx.restore(); }
+    return; }
   ctx.fillStyle = clock ? '#8A6A3A' : '#8A5A3C'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = clock ? '#E8C66A' : '#B47E52'; ctx.fillRect(x, y, w, 3);
   ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2); ctx.fillRect(x - 2, y - 2, 2, 16); ctx.fillRect(x + w, y - 2, 2, 16);
   for (const gx of [x + 14, x + w - 14]){ ctx.save(); ctx.translate(gx, y + 18); ctx.rotate((m.x + m.y)*.04); gearPath(ctx, 8, 8, .3); fillInk(ctx, clock ? '#C9A15A' : '#7A7E96', 1.4); ctx.beginPath(); ctx.arc(0, 0, 2.4, 0, Math.PI*2); ctx.fillStyle = INK; ctx.fill(); ctx.restore(); }
@@ -463,6 +532,7 @@ function drawWinds(){
   }
 }
 function drawDeco(dc){
+  if (DECO_EXTRA[dc.kind]){ DECO_EXTRA[dc.kind](dc); return; }
   const x = dc.x, y = dc.y;
   if (dc.kind === 'stall'){ // чайная лавка Мико
     ctx.fillStyle = '#3A2A3E'; ctx.fillRect(x - 4, y - 120, 8, 120); ctx.fillRect(x + 132, y - 120, 8, 120);
@@ -752,19 +822,26 @@ function menuStatic(){
 }
 // Мысли в облачках над городом — медленно проплывают по небу меню
 const MENU_THOUGHTS = [
-  'Даже маленький огонёк видно издалека.',
-  'Страшно — значит, ты уже в пути.',
-  'Не бойся идти медленно. Бойся стоять в темноте.',
-  'Свет не спорит с темнотой. Он просто горит.',
-  'Упал? Поднимайся у ближайшего фонаря.',
-  'Самые тёплые окна — там, где тебя ждут.',
-  'Кто зажигает фонари, первым видит рассвет.',
-  'Один фонарь — это уже улица.',
-  'Темно? Значит, самое время светить.',
+  'Мгла не ненавидит свет. Она просто очень голодна.',
+  'Если фонарь погас сам — кто-то очень не хотел, чтобы его увидели.',
+  'История города записана на медяшках и старых засечках.',
+  'Хороший фонарщик смотрит под ноги. Мудрый — смотрит на туман.',
+  'Даже самый яркий маяк когда-то начался с одной спички.',
+  'Внизу звонят колокола. Но там давно никто не живёт...',
+  'Дед говорит: «Не лезь». Но когда это меня останавливало?',
+  'Один фонарь — это не просто свет. Это чей-то дом.',
+  'Страшно — значит, ты идёшь в правильную сторону.',
   'Чай остынет. Хорошие вопросы — никогда.'
 ];
 // Места в небе справа от меню, где появляются пузыри (доли ширины и высоты экрана)
 const THOUGHT_SPOTS = [[.74, .12], [.8, .27], [.71, .32], [.78, .08], [.86, .19], [.72, .21]];
+// длинную мысль делим на две строки примерно поровну (по словам)
+function thoughtLines(text){
+  if (text.length <= 36) return [text];
+  const words = text.split(' '); let best = [text], diff = 1e9;
+  for (let i = 1; i < words.length; i++){ const a = words.slice(0, i).join(' '), b = words.slice(i).join(' '), d = Math.abs(a.length - b.length); if (d < diff){ diff = d; best = [a, b]; } }
+  return best;
+}
 function drawThoughts(u, t){
   const CYCLE = 8, k = t/CYCLE, n = Math.floor(k), p = k - n; // каждые 8 секунд — новый пузырь
   const text = MENU_THOUGHTS[(n*7) % MENU_THOUGHTS.length], spot = THOUGHT_SPOTS[(n*5) % THOUGHT_SPOTS.length];
@@ -772,18 +849,19 @@ function drawThoughts(u, t){
   if (a <= 0) return;
   const pop = appear < 1 ? 1 - Math.pow(1 - appear, 3)*1.0 + Math.sin(appear*Math.PI)*.08 : 1; // мягкое «надувание» с лёгким перелётом
   ctx.save(); ctx.font = `italic 600 ${Math.max(12, Math.round(15*u))}px ${SERIF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const w = ctx.measureText(text).width + 48*u, h = 40*u;
-  const x = clamp(VW*spot[0], w/2 + 10*u, VW - w/2 - 10*u), y = VH*spot[1] + Math.sin(t*.8)*4*u - (1 - vanish)*16*u;
+  const lines = thoughtLines(text), lh = 19*u;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 48*u, h = 40*u + (lines.length - 1)*lh;
+  const x = clamp(VW*spot[0], w/2 + 10*u, VW - w/2 - 10*u), y = Math.max(VH*spot[1], h*.95 + 6*u) + Math.sin(t*.8)*4*u - (1 - vanish)*16*u;
   ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(.7 + .3*pop, .7 + .3*pop);
   ctx.shadowColor = 'rgba(255,220,170,.35)'; ctx.shadowBlur = 16*u;
   ctx.fillStyle = 'rgba(244,237,223,.24)'; ctx.strokeStyle = 'rgba(255,246,226,.5)'; ctx.lineWidth = 1.4*u;
   ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI*2); ctx.ellipse(-w*.2, -h*.36, w*.2, h*.42, 0, 0, Math.PI*2); ctx.ellipse(w*.14, -h*.42, w*.24, h*.46, 0, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
   ctx.beginPath(); ctx.arc(-w*.32, h*.72, 4*u, 0, Math.PI*2); ctx.arc(-w*.38, h*1.05, 2.4*u, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#FFF8E8'; ctx.shadowColor = 'rgba(20,12,30,.6)'; ctx.shadowBlur = 6*u; ctx.fillText(text, 0, 1);
+  ctx.fillStyle = '#FFF8E8'; ctx.shadowColor = 'rgba(20,12,30,.6)'; ctx.shadowBlur = 6*u; lines.forEach((l, i) => ctx.fillText(l, 0, 1 + (i - (lines.length - 1)/2)*lh));
   ctx.restore();
 }
-function drawMenuScene(){
+function drawMenuScene(story){
   const M = menuStatic(), u = M.u, t = S.time, P = MENU_PTR;
   P.x += (P.tx - P.x)*.04; P.y += (P.ty - P.y)*.04;
   const drift = Math.sin(t*.07)*.35, px = (k) => -M.pad - (P.x + drift)*k*u, py = (k) => -P.y*k*.5*u;
@@ -801,7 +879,7 @@ function drawMenuScene(){
   for (let i = 0; i < 4; i++){ const w = (180 + i*60)*u, x = ((t*(4 + i*2)*u + i*VW*.37) % (VW + w*2)) - w, y = VH*(.12 + i*.07);
     ctx.fillStyle = `rgba(${180 - i*10},${160 - i*8},${210 - i*6},${.1 + i*.02})`; ctx.beginPath();
     for (let k = 0; k < 5; k++) ctx.ellipse(x + k*w/5, y - Math.sin(k/4*Math.PI)*14*u, w/4, 14*u, 0, 0, Math.PI*2); ctx.fill(); }
-  drawThoughts(u, t);
+  if (!story) drawThoughts(u, t);
   ctx.drawImage(M.far, px(4), py(4));
   // медленный тёплый луч маяка
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -875,6 +953,7 @@ function drawMenuScene(){
 function render(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (!S) return;
+  if (S.bioPlay){ drawStory(); if (S.fadeIn > 0){ ctx.fillStyle = `rgba(8,8,16,${Math.min(1, S.fadeIn/.8)})`; ctx.fillRect(0, 0, VW, VH); } return; }
   if (S.mode === 'title'){ drawMenuScene(); return; } // у меню свой фон, не зависящий от глав
   if (!LAYERS) buildLayers();
   if (S.prologue && S.scene){ inBaseFrame(() => { drawSlides(); ctx.save(); ctx.translate(-S.cam.x, -S.cam.y); drawParticles(false); ctx.restore(); }); return; }
@@ -900,6 +979,8 @@ function render(){
   if (!S.V.hidden && S.mode !== 'title') drawIskra(ctx, S.V.x, S.V.y, S.V.t, 1, S.V.scared);
   drawParticles(false);
   drawWave();
+  drawMech();
+  drawRise();
   drawParticles(true);
   ctx.restore();
   drawForeground();
@@ -910,10 +991,12 @@ function render(){
   ctx.save(); ctx.globalAlpha = .05; ctx.fillStyle = ctx.createPattern(GRAIN, 'repeat'); ctx.fillRect(0, 0, VW, VH); ctx.restore();
   if (S.flash > 0){ ctx.fillStyle = `rgba(226,112,58,${S.flash})`; ctx.fillRect(0, 0, VW, VH); }
   if (S.white > 0){ ctx.fillStyle = `rgba(16,12,28,${S.white})`; ctx.fillRect(0, 0, VW, VH);
-    if (S.mode === 'faint'){ ctx.font = `italic 500 24px ${SERIF}`; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(244,230,200,${S.white})`; ctx.fillText('Ая переводит дух у фонаря…', VW/2, VH/2); } }
+    if (S.mode === 'faint' || S.mode === 'caught'){ ctx.font = `italic 500 24px ${SERIF}`; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(244,230,200,${S.white})`; ctx.fillText(S.mode === 'caught' ? 'Стража заметила Аю — назад к фонарю…' : 'Ая переводит дух у последнего фонаря…', VW/2, VH/2); } }
   if (S.mode !== 'title' && S.mode !== 'card' && !S.scene) withHud(drawHUD);
-  if (S.mode === 'play') withHud(drawHintBanner);
-  if (S.scene) renderVN();
+  if (S.mode === 'play'){ withHud(drawHintBanner); drawBellHint(); }
+  const FL = S.scene && S.scene.lines[S.scene.i] && S.scene.lines[S.scene.i].flash;
+  if (FL){ const [who, i] = FL.split(':'); inBaseFrame(() => drawMemory(BIO_STORY[who].mem[+i])); } // вспышка воспоминания посреди сцены
+  else if (S.scene) renderVN();
   if (S.mode === 'card') drawCard();
   if (G1.paused){ ctx.fillStyle = 'rgba(12,10,22,.45)'; ctx.fillRect(0, 0, VW, VH); }
   if (S.fadeIn > 0){ ctx.fillStyle = `rgba(8,8,16,${Math.min(1, S.fadeIn/.8)})`; ctx.fillRect(0, 0, VW, VH); }

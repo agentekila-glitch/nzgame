@@ -21,7 +21,12 @@ const CH = {
   julia:{ name:'Жуля', skin:'#F4D3B9', blush:'#F39C8E', hair:'#3DB5A4', hairHi:'#86E0CF', eye:'#3F8F44',
     top:'#4F7D5A', topHi:'#6E9F76', trim:'#F2C14E', obi:'#F2C14E', legs:'#3B3550', boots:'#2E2A3E', hand:'#F4D3B9' },
   marta:{ name:'Марта', skin:'#F7E1CD', blush:'#EFA593', hair:'#F0CF78', hairHi:'#FFF0BE', eye:'#3E8E5A',
-    top:'#7C9C69', topHi:'#9DBB87', trim:'#D8C79A', obi:'#6B5A44', legs:'#5A4A3A', boots:'#4A3628', hand:'#F7E1CD' }
+    top:'#7C9C69', topHi:'#9DBB87', trim:'#D8C79A', obi:'#6B5A44', legs:'#5A4A3A', boots:'#4A3628', hand:'#F7E1CD' },
+  // статисты главы 5: стража гильдии и старейшина Совета
+  guard:{ name:'Стражник', skin:'#EBCDB6', blush:'#DDA08C', hair:'#3A2E28', hairHi:'#5A4A40', eye:'#3A3A4A',
+    top:'#2E3E5E', topHi:'#40547A', trim:'#C9A15A', obi:'#1E2638', legs:'#22283A', boots:'#141018', hand:'#EBCDB6', scale:1.04 },
+  elder:{ name:'Старейшина', skin:'#EDD0BA', blush:'#DFA290', hair:'#E8E4DC', hairHi:'#FFFFFF', eye:'#4A3A2E',
+    top:'#4A2E3E', topHi:'#6A4458', trim:'#D9B24A', obi:'#2A1A24', legs:'#3A2A34', boots:'#1E161C', hand:'#EDD0BA' }
 };
 function pathRR(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 function fillInk(c, fill, lw=2){ c.fillStyle = fill; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(); }
@@ -38,6 +43,21 @@ function scarfTail(c, col, swx, swy, t, len=1){
 /* Части персонажей. back — за телом (волосы, хвост, шарф); torso — детали одежды поверх туловища;
    coat — полы пальто поверх ног; front — в системе головы (центр 0,0, радиус 13): чёлка, шапки, борода. */
 const CHAR_PARTS = {
+  // стража гильдии: форменная фуражка с медной бляхой, портупея
+  guard:{
+    torso(c, k){ c.beginPath(); c.moveTo(-8, -29); c.lineTo(8, -14); c.lineWidth = 2.4; c.strokeStyle = '#1A1E2A'; c.stroke();
+      pathRR(c, -10, -17, 20, 3.4, 1.6); fillInk(c, '#1A1E2A', 1.4); c.beginPath(); c.arc(-4, -24, 2, 0, Math.PI*2); fillInk(c, k.trim, 1); },
+    front(c, k){ c.beginPath(); c.moveTo(-13.6, -2); c.quadraticCurveTo(-14, -14, 0, -15.5); c.quadraticCurveTo(14, -14, 13.6, -2); c.closePath(); fillInk(c, k.top);
+      c.beginPath(); c.moveTo(-14, -2); c.lineTo(16, -2); c.lineTo(17, 1); c.lineTo(-13, 1); c.closePath(); fillInk(c, '#141824', 1.4);
+      c.beginPath(); c.arc(1, -8, 3, 0, Math.PI*2); fillInk(c, k.trim, 1.2); }
+  },
+  // старейшина Совета: длинные седые волосы и борода
+  elder:{
+    back(c, k){ c.beginPath(); c.moveTo(-7, -54); c.bezierCurveTo(-19, -50, -18, -36, -14, -28); c.lineTo(6, -34); c.quadraticCurveTo(12, -46, 8, -54); c.closePath(); fillInk(c, k.hair); },
+    front(c, k){ c.beginPath(); c.moveTo(-13.4, 2); c.quadraticCurveTo(-14, -12, 0, -13.8); c.quadraticCurveTo(12, -13, 13.4, -2); c.quadraticCurveTo(6, -9, -2, -8.6); c.quadraticCurveTo(-9, -7, -13.4, 2); fillInk(c, k.hair);
+      c.beginPath(); c.moveTo(-1, 4); c.quadraticCurveTo(-1, 16, 5, 19); c.quadraticCurveTo(12, 15, 12, 4); c.quadraticCurveTo(6, 8, -1, 4); fillInk(c, k.hair);
+      c.beginPath(); c.arc(4.5, -3, 3.4, 0, Math.PI*2); c.moveTo(11.5, -3); c.arc(8.5, -3, 3, 0, Math.PI*2); c.lineWidth = 1.2; c.strokeStyle = '#C9A050'; c.stroke(); }
+  },
   aya:{
     back(c, k, P){ const {swx, swy, t} = P;
       scarfTail(c, k.trim, swx, swy, t, 1.15);
@@ -920,7 +940,8 @@ function renderVN(){
   ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
   for (const slot of ['L','R']){
     const s = sc.slots[slot]; if (!s || !s.who) continue;
-    s.enter = Math.min(1, (s.enter || 0) + 1/18);
+    if (s.leave){ s.enter = Math.max(0, (s.enter || 0) - 1/14); if (s.enter <= 0){ sc.slots[slot] = null; continue; } }
+    else s.enter = Math.min(1, (s.enter || 0) + 1/18);
     const speaking = sc.who === s.who, target = speaking ? 1 : 0; s.lit = s.lit === undefined ? target : approach(s.lit, target, 1/10);
     const buf = vnCanvas(slot), bx = buf.getContext('2d');
     bx.setTransform(1,0,0,1,0,0); bx.clearRect(0, 0, buf.width, buf.height);

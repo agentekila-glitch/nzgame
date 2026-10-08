@@ -90,6 +90,8 @@ button:focus-visible{outline:3px solid var(--amber); outline-offset:2px}
 .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:0 auto 1.1em; max-width:560px}
 .stats div{padding:.6em .3em; border-radius:14px; background:rgba(244,237,223,.08); font-size:clamp(10px,1.15cqw,13px); color:#D9CFBF}
 .stats b{display:block; font:800 clamp(17px,2.6cqw,27px) var(--sans); color:#F8D592}
+.stats span{display:block; margin-bottom:.2em}
+.stats small{display:block; margin-top:.2em; font-size:.9em; color:#B8AC98}
 .note{margin:0 auto 1.1em; max-width:48ch; padding:.9em 1.1em; border-radius:6px; background:#F1E6CC; color:var(--ink); text-align:left;
   font:italic 500 clamp(12px,1.5cqw,15px)/1.55 var(--serif); transform:rotate(-1deg); box-shadow:0 10px 24px -10px rgba(0,0,0,.6)}
 .note[hidden]{display:none}
@@ -298,3 +300,15 @@ body.touchui .kbwrap{display:none}
 .stage.short #about .ph{margin-bottom:.3em}
 .stage.short #about .lead{font-size:13px; line-height:1.4; margin:.3em 0}
 .stage.short #about .credits{margin:.5em 0 .7em}
+
+.bioquote{margin:-.3em 0 .8em; font:italic 500 14px var(--serif, Georgia, serif); color:#E8DCC4; line-height:1.4}
+
+/* Персонажи: копилка искорок, краткая биография, история */
+.sparks{margin:-.4em 0 .6em; text-align:center; font:800 13px var(--sans); color:#F8D592; letter-spacing:.04em}
+.bioabout{margin:0 0 .8em; font:500 14px/1.5 var(--serif); color:#EDE3D0}
+.biostory{margin-top:1em; padding:.8em .9em; border-radius:14px; background:rgba(244,237,223,.06); box-shadow:inset 0 0 0 1px rgba(244,237,223,.12)}
+.biostoryh{margin:0 0 .5em; font:800 11px var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--amber)}
+.biostorytext{margin:0 0 .8em; font:500 14px/1.55 var(--serif); color:#EDE3D0}
+.biostory .mbtn{width:100%}
+.biostory .mbtn:disabled{opacity:.45; cursor:default}
+.biostorynote{display:block; margin-top:.45em; font:700 12px var(--sans); color:#B8AC98; text-align:center}

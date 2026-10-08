@@ -6,22 +6,22 @@
 <title>Город гаснущих фонарей</title>
 <meta name="description" content="Повесть-платформер о фонарщице Ае и городе над туманом. Играй прямо в Telegram.">
 <script id="tgsdk" async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/fonts.css?v=0.3.8">
-<link rel="stylesheet" href="css/game.css?v=0.3.8">
+<link rel="stylesheet" href="css/fonts.css?v=0.4.3">
+<link rel="stylesheet" href="css/game.css?v=0.4.3">
 </head>
 <body>
 <div class="splash" id="splash">
   <div class="sp1">Ночной Кот представляет</div>
   <div class="sp2"><div class="spflame"></div><h1>Город<br>гаснущих фонарей</h1><p>Повесть о фонарщице</p><p class="sphello" id="spHello" hidden></p></div>
-  <div class="sphint">Нажми, чтобы продолжить</div>
+  <div class="sphint">Коснись экрана или нажми любую клавишу, чтобы начать</div>
 </div>
 <div class="app">
   <div class="stage" id="stage">
     <canvas id="c"></canvas>
     <button class="mute" id="mute" aria-label="Звук">♪</button>
-    <button class="hudbtn" id="jbtn" aria-label="Журнал разговоров" title="Журнал">✎</button>
+    <button class="hudbtn" id="jbtn" aria-label="Журнал" title="Журнал">✎</button>
     <button class="hudbtn pbtn" id="pbtn" aria-label="Пауза" title="Пауза">❚❚</button>
-    <button class="hudbtn fsbtn" id="fsbtn" aria-label="Полный экран" title="Полный экран (F)">⛶</button>
+    <button class="hudbtn fsbtn" id="fsbtn" aria-label="На весь экран" title="На весь экран (F)">⛶</button>
 
     <div class="touch" id="touch">
       <div class="tb" data-k="left"><span>◀</span></div>
@@ -30,8 +30,8 @@
       <div class="tb jump" data-k="jump"><span>▲</span></div>
     </div>
     <div class="tcpanel" id="tcPanel">
-      <p>Перетащи кнопки пальцем туда, где удобно</p>
-      <div class="row"><button class="ghost" id="tcReset">Как было</button><button class="big" id="tcDone">Готово</button></div>
+      <p>Перетащите элементы пальцем в удобные места на экране</p>
+      <div class="row"><button class="ghost" id="tcReset">Сбросить</button><button class="big" id="tcDone">Сохранить</button></div>
     </div>
 
     <div class="dlg" id="dlg">
@@ -49,7 +49,7 @@
 
     <div class="journal" id="journal" hidden>
       <div class="page">
-        <div class="jhead"><div><p class="ch">Журнал Аи</p><h2>Кто что сказал</h2></div><button class="ghost" id="jclose">Закрыть</button></div>
+        <div class="jhead"><div><p class="ch">Журнал Аи</p><h2>История разговоров</h2></div><button class="ghost" id="jclose">Закрыть</button></div>
         <div class="jlist" id="jlist"></div>
       </div>
     </div>
@@ -90,6 +90,7 @@
     <div class="screen" id="chars" hidden>
       <div class="panel card wide">
         <h2 class="ph">Персонажи</h2>
+        <p class="sparks" id="charSparks"></p>
         <div class="charlist" id="charList"></div>
         <div class="charinfo" id="charInfo" hidden></div>
         <div class="row"><button class="ghost" id="charsBack">Назад</button></div>
@@ -98,7 +99,7 @@
 
     <div class="screen" id="chapters" hidden>
       <div class="panel card wide">
-        <h2 class="ph">Главы</h2>
+        <h2 class="ph">Выбор главы</h2>
         <div class="chlist" id="chList"></div>
         <div class="row"><button class="ghost" id="chBack">Назад</button></div>
       </div>
@@ -107,7 +108,7 @@
     <div class="screen" id="confirm" hidden>
       <div class="panel card small">
         <p class="lead" id="cText"></p>
-        <div class="row"><button class="ghost" id="cNo">Отмена</button><button class="big" id="cYes">Да</button></div>
+        <div class="row"><button class="ghost" id="cNo">Отмена</button><button class="big" id="cYes">Подтвердить</button></div>
       </div>
     </div>
 
@@ -117,10 +118,10 @@
         <h2 class="ph">Пауза</h2>
         <nav class="mnav center">
           <button id="pResume" class="mbtn primary"><span>Продолжить</span></button>
-          <button id="pJournal" class="mbtn"><span>Журнал</span></button>
+          <button id="pJournal" class="mbtn"><span>Журнал разговоров</span></button>
           <button id="pSettings" class="mbtn"><span>Настройки</span></button>
-          <button id="pLamp" class="mbtn"><span>Вернуться к фонарю</span></button>
-          <button id="pMenu" class="mbtn"><span>Главное меню</span></button>
+          <button id="pLamp" class="mbtn" title="Перезапуск с чекпоинта"><span>Вернуться к последнему фонарю</span></button>
+          <button id="pMenu" class="mbtn"><span>В главное меню</span></button>
         </nav>
       </div>
     </div>
@@ -131,32 +132,32 @@
         <div class="tabs"><button data-tab="sound" class="on">Звук</button><button data-tab="game">Игра</button><button data-tab="ctrl">Управление</button></div>
         <div class="tabpanel" data-tab="sound">
           <div class="srow"><label for="sMusic">Музыка</label><input type="range" id="sMusic" min="0" max="100"><output id="oMusic"></output></div>
-          <div class="srow"><label for="sSfx">Звуки</label><input type="range" id="sSfx" min="0" max="100"><output id="oSfx"></output></div>
+          <div class="srow"><label for="sSfx">Звуковые эффекты</label><input type="range" id="sSfx" min="0" max="100"><output id="oSfx"></output></div>
         </div>
         <div class="tabpanel" data-tab="game" hidden>
           <div class="srow"><label>Скорость текста</label><div class="seg" id="sText">
-            <button data-v="slow">Медленно</button><button data-v="normal">Обычно</button><button data-v="fast">Быстро</button><button data-v="instant">Сразу</button></div></div>
-          <div class="srow"><label for="sAuto">Авто-диалоги<small>Реплики листаются сами</small></label><input type="checkbox" class="sw" id="sAuto"></div>
-          <div class="srow"><label for="sAssist">Помощь в прыжках<small>Больше времени на прыжок у края</small></label><input type="checkbox" class="sw" id="sAssist"></div>
-          <div class="srow"><label for="sShake">Тряска экрана</label><input type="checkbox" class="sw" id="sShake"></div>
-          <div class="srow"><label for="sVibro">Вибрация<small>Только на телефоне</small></label><input type="checkbox" class="sw" id="sVibro"></div>
+            <button data-v="slow">Медленно</button><button data-v="normal">Обычно</button><button data-v="fast">Быстро</button><button data-v="instant">Мгновенно</button></div></div>
+          <div class="srow"><label for="sAuto">Авточтение диалогов<small>Реплики переключаются автоматически</small></label><input type="checkbox" class="sw" id="sAuto"></div>
+          <div class="srow"><label for="sAssist">Помощь в прыжках (Coyote Time)<small>Даёт пару мгновений для прыжка, даже если персонаж сошёл с края платформы</small></label><input type="checkbox" class="sw" id="sAssist"></div>
+          <div class="srow"><label for="sShake">Тряска экрана при ударах</label><input type="checkbox" class="sw" id="sShake"></div>
+          <div class="srow"><label for="sVibro">Вибрация<small>Тактильный отклик (только для смартфонов)</small></label><input type="checkbox" class="sw" id="sVibro"></div>
           <div class="srow"><label for="sHints">Подсказки в мире</label><input type="checkbox" class="sw" id="sHints"></div>
         </div>
         <div class="tabpanel" data-tab="ctrl" hidden>
-          <p class="sec">Кнопки на экране <small>Сейчас: <span id="devNow"></span></small></p>
-          <div class="srow"><label>Показывать<small>«Авто» — на телефоне да, на компьютере нет</small></label><div class="seg" id="sTouchUI">
+          <p class="sec">Кнопки управления <small>Сейчас: <span id="devNow"></span></small></p>
+          <div class="srow"><label>Отображение кнопок<small>Авто: на смартфоне — да, на ПК — скрыты</small></label><div class="seg" id="sTouchUI">
             <button data-v="auto">Авто</button><button data-v="on">Всегда</button><button data-v="off">Никогда</button></div></div>
-          <div class="srow"><label for="sTcSize">Размер кнопок</label><input type="range" id="sTcSize" min="70" max="150" step="5"><output id="oTcSize"></output></div>
-          <div class="srow"><label for="sTcAlpha">Прозрачность</label><input type="range" id="sTcAlpha" min="20" max="100" step="5"><output id="oTcAlpha"></output></div>
-          <div class="srow"><label>Раскладка</label><div class="seg" id="sTcLayout"><button data-v="std">Обычная</button><button data-v="left">Для левшей</button></div></div>
-          <div class="row left"><button class="ghost" id="sTcMove">Переставить кнопки</button><button class="ghost" id="sTcReset">Сбросить кнопки</button></div>
+          <div class="srow"><label for="sTcSize">Размер кнопок на экране</label><input type="range" id="sTcSize" min="70" max="150" step="5"><output id="oTcSize"></output></div>
+          <div class="srow"><label for="sTcAlpha">Прозрачность сенсора</label><input type="range" id="sTcAlpha" min="20" max="100" step="5"><output id="oTcAlpha"></output></div>
+          <div class="srow"><label>Раскладка</label><div class="seg" id="sTcLayout"><button data-v="std">Для правой руки</button><button data-v="left">Для левшей</button></div></div>
+          <div class="row left"><button class="ghost" id="sTcMove">Переставить кнопки на экране</button><button class="ghost" id="sTcReset">Сбросить расположение</button></div>
           <div class="kbwrap">
-            <p class="sec">Клавиатура <small>Нажми на кнопку и затем на нужную клавишу. Backspace — убрать.</small></p>
+            <p class="sec">Назначение клавиш <small>Выберите действие, затем нажмите нужную клавишу. Backspace — очистить.</small></p>
             <div class="keylist" id="keyList"></div>
-            <div class="row left"><button class="ghost" id="kReset">Клавиши по умолчанию</button></div>
+            <div class="row left"><button class="ghost" id="kReset">Вернуть клавиши по умолчанию</button></div>
           </div>
         </div>
-        <div class="row"><button class="ghost" id="sReset">Сбросить</button><button class="big" id="sDone">Готово</button></div>
+        <div class="row"><button class="ghost" id="sReset">Сброс</button><button class="big" id="sDone">Готово</button></div>
         <p class="vermini">Версия <span id="sVer"></span></p>
       </div>
     </div>
@@ -164,13 +165,13 @@
     <div class="screen" id="about" hidden>
       <div class="panel card small">
         <h2 class="ph">Об игре</h2>
-        <p class="lead">«Город гаснущих фонарей» — повесть-платформер о городе на скалах над Мглой.</p>
-        <p class="lead">Здесь фонари зажигают каждый вечер. Они держат туман внизу, а город — в безопасности.</p>
-        <p class="lead">Но однажды фонари начинают гаснуть сами.</p>
-        <p class="lead">Ая, молодая фонарщица, выходит на свой первый самостоятельный обход и обнаруживает, что у города есть тайны, о которых ей никто не рассказывал.</p>
-        <p class="lead dim">Персонажи, мир, свет и музыка — нарисованы и собраны в коде.</p>
+        <p class="lead">«Город гаснущих фонарей» — атмосферная повесть-платформер о древнем городе, застывшем на скалах над бездонной Мглой.</p>
+        <p class="lead">Каждый вечер фонарщики выходят на обход: пока горит свет, туман не может подняться к домам.</p>
+        <p class="lead">Но в этот вечер всё меняется — фонари начинают гаснуть сами по себе.</p>
+        <p class="lead">Молодая фонарщица Ая отправляется на свой первый самостоятельный обход и оказывается втянута в тайну, которую город скрывал двадцать лет.</p>
+        <p class="lead dim">Персонажи, визуальный стиль, игровой мир и музыка созданы с любовью.</p>
         <dl class="credits"><dt>Автор</dt><dd>Ночной Кот</dd><dt>Версия</dt><dd id="aboutVer"></dd></dl>
-        <div class="row"><button class="ghost" id="aWipe">Стереть прогресс</button><button class="big" id="aBack">Назад</button></div>
+        <div class="row"><button class="ghost" id="aWipe">Стереть весь прогресс</button><button class="big" id="aBack">Назад</button></div>
       </div>
     </div>
 
@@ -180,29 +181,34 @@
         <h1 id="endTitle"></h1>
         <p class="sub" id="endSub"></p>
         <div class="stats">
-          <div><b id="stFind">0/3</b><span id="stFindL">находок</span></div>
-          <div><b id="stDrops">0</b>искорок</div>
-          <div><b id="stFaint">0</b>раз без сил</div>
-          <div><b id="stTime">0:00</b>в пути</div>
+          <div><span>Найдено:</span><b id="stFind">0/3</b><small id="stFindL"></small></div>
+          <div><span>Искорки:</span><b id="stDrops">0</b></div>
+          <div><span>Ошибок:</span><b id="stFaint">0</b></div>
+          <div><span>Время:</span><b id="stTime">0:00</b></div>
         </div>
         <div class="note" id="endNote"></div>
         <p class="sub final" id="endFinal" hidden></p>
-        <div class="row"><button class="ghost" id="endMenu">Главное меню</button><button class="big" id="endNext">Дальше</button></div>
+        <div class="row"><button class="ghost" id="endMenu">В главное меню</button><button class="big" id="endNext">Далее</button></div>
       </div>
     </div>
   </div>
   <p class="hint">Город гаснущих фонарей · Автор: Ночной Кот · <span>управление: стрелки / A D, прыжок — пробел</span></p>
 </div>
 
-<script src="js/core.js?v=0.3.8"></script>
-<script src="js/characters.js?v=0.3.8"></script>
-<script src="js/engine.js?v=0.3.8"></script>
-<script src="js/render.js?v=0.3.8"></script>
-<script src="chapters/prologue.js?v=0.3.8"></script>
-<script src="chapters/ch1.js?v=0.3.8"></script>
-<script src="chapters/ch2.js?v=0.3.8"></script>
-<script src="chapters/ch3.js?v=0.3.8"></script>
-<script src="chapters/ch4.js?v=0.3.8"></script>
-<script src="js/bios.js?v=0.3.8"></script>
-<script src="js/ui.js?v=0.3.8"></script>
+<script src="js/core.js?v=0.4.3"></script>
+<script src="js/characters.js?v=0.4.3"></script>
+<script src="js/engine.js?v=0.4.3"></script>
+<script src="js/mech.js?v=0.4.3"></script>
+<script src="js/render.js?v=0.4.3"></script>
+<script src="chapters/prologue.js?v=0.4.3"></script>
+<script src="chapters/ch1.js?v=0.4.3"></script>
+<script src="chapters/ch2.js?v=0.4.3"></script>
+<script src="chapters/ch3.js?v=0.4.3"></script>
+<script src="chapters/ch4.js?v=0.4.3"></script>
+<script src="chapters/ch5a.js?v=0.4.3"></script>
+<script src="chapters/ch5b.js?v=0.4.3"></script>
+<script src="chapters/ch5.js?v=0.4.3"></script>
+<script src="js/bios.js?v=0.4.3"></script>
+<script src="js/biostory.js?v=0.4.3"></script>
+<script src="js/ui.js?v=0.4.3"></script>
 </body></html>

@@ -22,10 +22,10 @@ function showMenu(){
   showScreen('title');
   $('mContinue').hidden = !d;
   const info = d ? `${CHAPTERS[d.ch].label}. ${CHAPTERS[d.ch].title}` : '';
-  if (d) $('mContInfo').textContent = info + (d.play ? ' · ' + Math.max(1, Math.round(d.play/60)) + ' мин' : '');
+  if (d) $('mContInfo').innerHTML = info + (d.play ? ' · ' + Math.max(1, Math.round(d.play/60)) + ' мин' : '') + '<br>Автосохранение у фонаря';
   $('mPlayInfo').textContent = d ? 'Продолжить: ' + info : 'Начать историю';
-  const open = Math.min(prog.unlocked, CHAPTERS.length - 1) + 1;
-  $('mChInfo').textContent = `Открыто ${open} из ${CHAPTERS.length}`;
+  const cards = CHAPTERS.filter(c => !c.group || c.partNo === 1), open = cards.filter(c => c.index <= prog.unlocked).length; // участки главы — одна карточка
+  $('mChInfo').textContent = `Открыто ${open} из ${cards.length}`;
   setMusic(true, 'menu');
 }
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }
@@ -35,7 +35,7 @@ $('cYes').addEventListener('click', () => { const f = confirmYes; confirmYes = n
 $('cNo').addEventListener('click', () => showScreen(confirmFrom));
 $('mNew').addEventListener('click', () => {
   const go = () => { store.set(SKEY, 'null'); startChapter(0); };
-  if (readSave()) askConfirm('Начать заново? Текущее сохранение будет заменено. Открытые главы и персонажи останутся.', 'Начать заново', go, 'play'); else go();
+  if (readSave()) askConfirm('Начать историю заново? Текущий прогресс на уровне сбросится, но открытые главы и биографии в журнале останутся.', 'Начать заново', go, 'play'); else go();
 });
 $('mContinue').addEventListener('click', () => { const d = readSave(); if (d && d.flags && d.flags.fresh) startChapter(d.ch); else loadGame(); });
 $('mChapters').addEventListener('click', () => { renderChapters(); showScreen('chapters'); });
@@ -47,18 +47,19 @@ $('mSettings').addEventListener('click', () => openSettings('title'));
 $('mAbout').addEventListener('click', () => showScreen('about'));
 $('aBack').addEventListener('click', () => showScreen('title'));
 $('chBack').addEventListener('click', () => showScreen('play'));
-$('aWipe').addEventListener('click', () => askConfirm('Стереть весь прогресс, открытые главы и журнал? Это нельзя отменить.', 'Стереть', () => {
-  store.set(SKEY, 'null'); store.set(PKEY, JSON.stringify({unlocked:0})); store.set(JKEY, ''); Journal.data = {order:[], scenes:{}}; toast('Прогресс стёрт'); showMenu(); }, 'about'));
+$('aWipe').addEventListener('click', () => askConfirm('Полностью обнулить игру? Все открытые главы, находки и журнал будут стёрты. Это действие нельзя отменить.', 'Стереть всё', () => {
+  store.set(SKEY, 'null'); store.set(PKEY, JSON.stringify({unlocked:0})); store.set(JKEY, ''); Journal.data = {order:[], scenes:{}}; toast('Прогресс полностью сброшен'); showMenu(); }, 'about'));
 function renderChapters(){
   // Глава открывается, когда пройдена предыдущая. Закрытые видно, но выбрать нельзя.
   const el = $('chList'), prog = readProgress(); el.innerHTML = '';
   CHAPTERS.forEach((ch, i) => {
-    const open = i <= prog.unlocked, done = chapterDone(ch.id), prev = CHAPTERS[i - 1];
+    if (ch.group && ch.partNo > 1) return; // остальные участки главы в списке не показываем
+    const open = i <= prog.unlocked, done = chapterDone(ch.group || ch.id), prev = CHAPTERS[i - 1], title = ch.groupTitle || ch.title;
     const b = document.createElement('button'); b.className = 'chcard' + (open ? '' : ' locked') + (done ? ' done' : '');
-    const why = i - 1 === prog.unlocked ? `Пройди «${prev.title}», чтобы открыть` : 'Сначала пройди предыдущие главы';
-    b.innerHTML = `<small>${ch.label}${done ? ' · пройдена ✓' : ''}</small><b>${open ? ch.title : '🔒 Закрыта'}</b><span>${open ? ch.sub : why}</span>`;
+    const why = i - 1 === prog.unlocked ? `Пройди «${prev.groupTitle || prev.title}», чтобы открыть этот этап` : 'Сначала пройди предыдущие главы';
+    b.innerHTML = `<small>${ch.label}${done ? ' · ✓ Пройдена' : ''}</small><b>${open ? title : '🔒 Закрыто'}</b><span>${open ? (ch.groupSub || ch.sub) : why}</span>`;
     b.disabled = !open;
-    b.addEventListener('click', () => askConfirm(`Начать «${ch.title}» с начала? Текущее сохранение будет заменено.`, 'Играть', () => startChapter(i), 'chapters'));
+    b.addEventListener('click', () => askConfirm(`Перепройти «${title}»? Прогресс внутри текущей главы сбросится до её начала.`, 'Играть', () => startChapter(i), 'chapters'));
     el.appendChild(b);
   });
 }
@@ -66,7 +67,7 @@ function renderChapters(){
 $('pResume').addEventListener('click', closePause);
 $('pJournal').addEventListener('click', () => openJournal());
 $('pSettings').addEventListener('click', () => openSettings('pause'));
-$('pLamp').addEventListener('click', () => { closePause(); respawn(); toast('Ая вернулась к фонарю'); });
+$('pLamp').addEventListener('click', () => { closePause(); respawn(); toast('Возвращение к фонарю...'); });
 $('pMenu').addEventListener('click', () => { if (S.mode === 'play') saveGame(true); showMenu(); });
 $('pbtn').addEventListener('click', e => { e.currentTarget.blur(); openPause(); });
 $('mute').addEventListener('click', e => { toggleMute(); e.currentTarget.blur(); });
@@ -75,12 +76,15 @@ $('mute').textContent = muted ? '✕' : '♪';
 /* ================= Итоги главы ================= */
 function showEnd(){
   const ch = curCh(), last = S.ch >= CHAPTERS.length - 1, fk = FIND_KINDS[ch.find];
-  $('endKick').textContent = `${ch.label} пройдена`; $('endTitle').textContent = ch.title;
+  $('endKick').textContent = ch.id === 'prologue' ? 'Пролог завершён!' : `${ch.label} завершена!`; $('endTitle').textContent = ch.groupTitle || ch.title;
   $('endSub').textContent = ch.endSub || '';
-  $('stFind').textContent = fk ? `${S.finds}/${S.W.finds.length}` : '—'; $('stFindL').textContent = fk ? fk.many.toLowerCase() : 'находок';
+  $('stFind').textContent = fk ? `${S.finds}/${S.W.finds.length}` : '—'; $('stFindL').textContent = fk ? fk.many : '';
   $('stDrops').textContent = S.drops; $('stFaint').textContent = S.faints; $('stTime').textContent = fmtTime(S.play);
+  if (ch.group){ // глава из нескольких участков: итог по всей главе
+    const run = readProgress().run || {}, parts = CHAPTERS.filter(c => c.group === ch.group).map(c => run[c.id]).filter(Boolean), sum = k => parts.reduce((a, r) => a + r[k], 0);
+    $('stFind').textContent = `${sum('finds')}/${sum('total')}`; $('stDrops').textContent = sum('drops'); $('stFaint').textContent = sum('faints'); $('stTime').textContent = fmtTime(sum('play')); }
   $('endNote').innerHTML = ch.endNote || ''; $('endNote').hidden = !ch.endNote;
-  $('endNext').textContent = last ? 'В главное меню' : `Дальше: ${CHAPTERS[S.ch + 1].title}`;
+  $('endNext').textContent = last ? 'В главное меню' : `Далее: ${CHAPTERS[S.ch + 1].title}`;
   const fin = last ? 'Продолжение следует.' : (ch.partEnd || ''); $('endFinal').textContent = fin; $('endFinal').hidden = !fin;
   showScreen('end');
 }
@@ -112,7 +116,7 @@ function syncSettings(){
   $('sAuto').checked = SET.auto; $('sAssist').checked = SET.assist; $('sShake').checked = SET.shake; $('sVibro').checked = SET.vibro; $('sHints').checked = SET.hints;
   $('sTcSize').value = Math.round(SET.tcSize*100); $('oTcSize').textContent = $('sTcSize').value + '%';
   $('sTcAlpha').value = Math.round(SET.tcAlpha*100); $('oTcAlpha').textContent = $('sTcAlpha').value + '%';
-  $('devNow').textContent = deviceIsTouch() ? 'телефон — кнопки на экране' : 'компьютер — клавиатура';
+  $('devNow').textContent = deviceIsTouch() ? 'Сенсор на экране' : 'Клавиатура';
   renderKeys(); applyTouchLayout();
 }
 $('sMusic').addEventListener('input', e => { SET.music = e.target.value/100; $('oMusic').textContent = e.target.value; saveSettings(); });
@@ -125,8 +129,8 @@ for (const [id, key] of [['sAuto','auto'],['sAssist','assist'],['sShake','shake'
 $('sTcSize').addEventListener('input', e => { SET.tcSize = e.target.value/100; $('oTcSize').textContent = e.target.value + '%'; saveSettings(); applyTouchLayout(); });
 $('sTcAlpha').addEventListener('input', e => { SET.tcAlpha = e.target.value/100; $('oTcAlpha').textContent = e.target.value + '%'; saveSettings(); applyTouchLayout(); });
 $('sTcMove').addEventListener('click', () => startTcEdit());
-$('sTcReset').addEventListener('click', () => { SET.tcPos = null; SET.tcSize = 1; SET.tcAlpha = SET_DEF.tcAlpha; saveSettings(); syncSettings(); toast('Кнопки на прежних местах'); });
-$('sReset').addEventListener('click', () => { const keep = {keys:SET.keys, tcPos:SET.tcPos}; Object.assign(SET, SET_DEF, keep); saveSettings(); syncSettings(); toast('Настройки сброшены'); });
+$('sTcReset').addEventListener('click', () => { SET.tcPos = null; SET.tcSize = 1; SET.tcAlpha = SET_DEF.tcAlpha; saveSettings(); syncSettings(); toast('Расположение кнопок восстановлено'); });
+$('sReset').addEventListener('click', () => { const keep = {keys:SET.keys, tcPos:SET.tcPos}; Object.assign(SET, SET_DEF, keep); saveSettings(); syncSettings(); toast('Настройки сброшены к стандартным'); });
 $('sDone').addEventListener('click', closeSettings);
 
 // ---- Переназначение клавиш
@@ -137,7 +141,7 @@ function renderKeys(){
     const row = document.createElement('div'); row.className = 'krow';
     row.innerHTML = `<span>${label}</span>`;
     for (let slot=0; slot<2; slot++){ const b = document.createElement('button'); b.className = 'kbtn'; b.textContent = keyName(KEYS[a][slot]);
-      b.addEventListener('click', () => { if (rebinding) rebinding.el.classList.remove('wait'); rebinding = {action:a, slot, el:b}; b.textContent = 'Нажмите клавишу…'; b.classList.add('wait'); });
+      b.addEventListener('click', () => { if (rebinding) rebinding.el.classList.remove('wait'); rebinding = {action:a, slot, el:b}; b.textContent = 'Нажмите любую клавишу…'; b.classList.add('wait'); });
       row.appendChild(b); }
     el.appendChild(row);
   }
@@ -151,17 +155,19 @@ addEventListener('keydown', e => {
   if (code) for (const a in k) k[a] = k[a].map(c => c === code ? '' : c);
   k[action][slot] = code; SET.keys = k; saveSettings(); renderKeys(); sfx.click();
 }, true);
-$('kReset').addEventListener('click', () => { SET.keys = null; saveSettings(); renderKeys(); toast('Клавиши по умолчанию'); });
+$('kReset').addEventListener('click', () => { SET.keys = null; saveSettings(); renderKeys(); toast('Клавиши сброшены по умолчанию'); });
 
 /* ================= Экранные кнопки ================= */
 // Позиции — в долях «безопасной» области кадра (без выреза и кнопок Telegram)
-const TC_STD = {left:[.09,.8], right:[.22,.8], down:[.78,.84], jump:[.91,.72]};
+// Справа столбиком: прыжок сверху, спуск под ним. Слева — движение.
+const TC_STD = {left:[.09,.8], right:[.24,.8], jump:[.9,.55], down:[.9,.83]};
+if (SET.tcVer !== 2){ SET.tcPos = null; SET.tcVer = 2; saveSettings(); } // новая раскладка — старые перестановки сбрасываем один раз
 function tcPos(k){ const p = SET.tcPos && SET.tcPos[k]; if (p) return p; const d = TC_STD[k]; return SET.tcLayout === 'left' ? [1 - d[0], d[1]] : d; }
 let HUDPX = {t:0, r:0, b:0, l:0};
 function applyTouchLayout(){
   const st = $('stage'), W = st.clientWidth || 960, H = st.clientHeight || 540;
   const sw = W - HUDPX.l - HUDPX.r, sh = H - HUDPX.t - HUDPX.b;
-  const base = clamp(Math.min(W, H*1.8) * .1, 64, 104) * SET.tcSize;
+  const base = clamp(Math.min(W, H*1.8) * .12, 76, 124) * SET.tcSize;
   st.style.setProperty('--tcs', base + 'px'); st.style.setProperty('--tca', SET.tcAlpha);
   for (const b of document.querySelectorAll('#touch .tb')){ const [x, y] = tcPos(b.dataset.k);
     b.style.left = (HUDPX.l + sw*x) + 'px'; b.style.top = (HUDPX.t + sh*y) + 'px'; }
