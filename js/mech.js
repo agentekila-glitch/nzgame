@@ -30,11 +30,10 @@ function extendBuilder(h, out, F){
     // Открывается сигналом id (замок, сцена). invert — наоборот: открыта, пока сигнала нет (её роняют сверху)
     gate(c, r0, r1, id, o={}){ const w = o.w || 1; for (let i=0;i<w;i++) for (let r=r0;r<=r1;r++) h.put(c + i, r, o.invert ? ' ' : 'g');
       out.gates.push(Object.assign({c, w, r0, r1, id, look:'grate', open:!!o.invert, k:o.invert ? 1 : 0}, o)); },
-    // архивный противовес: платформа len клеток в (c, r). Под Аей опускается на drop клеток за 1,5 с, без неё
-    // поднимается за 3 с. pair:[c, r, len] — связанная платформа, которая в это время едет вверх.
-    // Тяжёлое приземление после двойного прыжка — платформа падает сразу и стопорится на 5 секунд.
-    // lock:false — без фиксатора (над водой: застопорившись внизу, платформа утопила бы Аю)
-    cw(c, r, len, o={}){ const A = {x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:0, period:1, cw:true, k:0, lock:0, slam:0, dist:(o.drop || 6)*T, noLock:o.lock === false};
+    // архивный противовес: платформа len клеток в (c, r). Пока на ней стоят, ровно опускается на drop клеток за 1,5 с,
+    // без Аи так же ровно поднимается за 3 с — без рывков, как бы на неё ни прыгнули.
+    // pair:[c, r, len] — связанная платформа, которая в это время едет вверх.
+    cw(c, r, len, o={}){ const A = {x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:0, period:1, cw:true, k:0, dist:(o.drop || 6)*T};
       out.movers.push(A);
       if (o.pair){ const [pc, pr, pl] = o.pair; const B = {x0:pc*T, y0:pr*T, x:pc*T, y:pr*T, w:(pl || len)*T, h:14, dx:0, dy:0, t:0, period:1, cwB:A}; A.partner = B; out.movers.push(B); } },
     // замок Хранителей: медная розетка на стене у пола ряда r. Встать рядом и держать «вниз» 2 секунды
@@ -148,16 +147,12 @@ function updateCh6(dt, frozen){
 function moveCw(m, dt){
   if (m.cwB) return; // связанную платформу двигает основная
   const p = S.P, on = p.mover === m, was = m.k;
-  if (m.lock > 0){ m.lock -= dt; if (m.lock <= 0) sfx.latch(); }
-  const tgt = on || m.lock > 0 ? 1 : 0;
-  m.k = approach(m.k, tgt, dt/(m.slam > 0 ? .2 : tgt ? 1.5 : 3)); m.slam = Math.max(0, m.slam - dt);
+  m.k = approach(m.k, on ? 1 : 0, dt/(on ? 1.5 : 3)); // всегда с одной скоростью
   const ny = m.y0 + m.k*m.dist; m.dy = ny - m.y; m.dx = 0; m.y = ny;
   if (m.partner){ const B = m.partner, by = B.y0 - m.k*m.dist; B.dy = by - B.y; B.dx = 0; B.y = by; }
   if ((was === 0 && m.k > 0) || (was === 1 && m.k < 1)) sfx.chain();
   if (was < 1 && m.k >= 1) sfx.land(.35);
 }
-// тяжёлое приземление на противовес: падает сразу и стопорится медным фиксатором
-function cwSlam(m){ if (!m || !m.cw || m.noLock) return; m.slam = .2; m.lock = 5; sfx.latch(); camKick(4); }
 // стена между стражником и Аей закрывает обзор
 function lineBlocked(x0, y0, x1, y1){
   const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)/16);
@@ -263,7 +258,7 @@ function drawCw(m){
   if (m.cw){ const lx = x + w/2; ctx.fillStyle = '#4A3A30'; ctx.fillRect(lx - 3, y - 16, 6, 16);
     ctx.fillStyle = 'rgba(255,210,140,.22)'; ctx.beginPath(); ctx.arc(lx, y - 20, 14, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#F2C46A'; ctx.beginPath(); ctx.arc(lx, y - 20, 5, 0, Math.PI*2); ctx.fill();
-    if (m.lock > 0){ ctx.strokeStyle = '#FFE3A8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + w/2, y - 40, 9, -Math.PI/2, -Math.PI/2 + Math.PI*2*m.lock/5); ctx.stroke(); } }
+  }
 }
 // Мгла снизу — рисуется поверх мира
 function drawRise(){
