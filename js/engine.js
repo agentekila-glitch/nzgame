@@ -208,14 +208,14 @@ function updatePlayer(dt){
   } else if (p.onGround && !p.mover) p.mover = null;
   if (p.mover) p.onGround = true;
   if (!was && p.onGround){
-    const h = clamp((fallV - 300) / 800, 0, 1);
+    const h = clamp((fallV - 300) / 800, 0, 1), usedDouble = p.doubled;
     p.doubled = false;
     // хрупкая полка не выдерживает тяжёлого приземления
     if (fallV > 640 && p.groundTile){ const [gc, gr] = p.groundTile; let broke = false;
       for (let dc=-1; dc<=1; dc++){ const f = S.W.fades[(gc+dc)+','+gr]; if (f && f.brittle && f.state === 'ok'){ f.state = 'gone'; f.perm = true; broke = true;
         burst(f.c*T + 16, f.r*T + 6, 12, ['#C9B79A','#9A8466','#6E5A44'], {angle:Math.PI/2, spread:1, min:20, max:140, g:600, kind:'paper'}); } }
       if (broke){ sfx.crumble(); camKick(4); p.onGround = false; p.groundTile = null; } }
-    if (fallV > 640 && p.mover && p.mover.cw) cwSlam(p.mover); // тяжёлое приземление на противовес (глава 6)
+    if (usedDouble && fallV > 640 && p.mover && p.mover.cw) cwSlam(p.mover); // тяжёлое приземление на противовес — только после двойного прыжка (глава 6)
     if (fallV > 260){ squash(1 + .32*h + .08, 1 - .28*h - .06); sfx.land(h); dust(p.x + p.w/2, p.y + p.h, 4 + Math.round(h*8)); camKick(2 + h*5); if (h > .6) buzz(18); }
     p.lastFoot = p.phase;
   }

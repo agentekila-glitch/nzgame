@@ -33,7 +33,8 @@ function extendBuilder(h, out, F){
     // архивный противовес: платформа len клеток в (c, r). Под Аей опускается на drop клеток за 1,5 с, без неё
     // поднимается за 3 с. pair:[c, r, len] — связанная платформа, которая в это время едет вверх.
     // Тяжёлое приземление после двойного прыжка — платформа падает сразу и стопорится на 5 секунд.
-    cw(c, r, len, o={}){ const A = {x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:0, period:1, cw:true, k:0, lock:0, slam:0, dist:(o.drop || 6)*T};
+    // lock:false — без фиксатора (над водой: застопорившись внизу, платформа утопила бы Аю)
+    cw(c, r, len, o={}){ const A = {x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:0, period:1, cw:true, k:0, lock:0, slam:0, dist:(o.drop || 6)*T, noLock:o.lock === false};
       out.movers.push(A);
       if (o.pair){ const [pc, pr, pl] = o.pair; const B = {x0:pc*T, y0:pr*T, x:pc*T, y:pr*T, w:(pl || len)*T, h:14, dx:0, dy:0, t:0, period:1, cwB:A}; A.partner = B; out.movers.push(B); } },
     // замок Хранителей: медная розетка на стене у пола ряда r. Встать рядом и держать «вниз» 2 секунды
@@ -156,7 +157,7 @@ function moveCw(m, dt){
   if (was < 1 && m.k >= 1) sfx.land(.35);
 }
 // тяжёлое приземление на противовес: падает сразу и стопорится медным фиксатором
-function cwSlam(m){ if (!m || !m.cw) return; m.slam = .2; m.lock = 5; sfx.latch(); camKick(4); }
+function cwSlam(m){ if (!m || !m.cw || m.noLock) return; m.slam = .2; m.lock = 5; sfx.latch(); camKick(4); }
 // стена между стражником и Аей закрывает обзор
 function lineBlocked(x0, y0, x1, y1){
   const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)/16);
@@ -223,11 +224,10 @@ function drawMech(){
 }
 function drawCh6(){
   const W = S.W; if (!W.gates) return; const vis = (x, m=120) => x > S.cam.x - m && x < S.cam.x + VW + m;
-  for (const w of W.waters){ if (!vis(w.x, w.w)) continue; // вода
-    const g = ctx.createLinearGradient(0, w.y, 0, w.y + 90); g.addColorStop(0, 'rgba(70,120,140,.85)'); g.addColorStop(1, 'rgba(20,40,56,.95)');
-    ctx.fillStyle = g; ctx.fillRect(w.x, w.y, w.w, 120);
+  for (const w of W.waters){ const x0 = Math.max(w.x, S.cam.x - 20), x1 = Math.min(w.x + w.w, S.cam.x + VW + 20); if (x1 <= x0) continue; // вода — только видимая часть
+    ctx.fillStyle = 'rgba(28,52,70,.94)'; ctx.fillRect(x0, w.y, x1 - x0, 120); ctx.fillStyle = 'rgba(70,120,140,.6)'; ctx.fillRect(x0, w.y, x1 - x0, 14);
     ctx.strokeStyle = 'rgba(190,230,240,.55)'; ctx.lineWidth = 2; ctx.beginPath();
-    for (let x = w.x; x <= w.x + w.w; x += 8) ctx.lineTo(x, w.y + Math.sin(x*.05 + w.t*2)*2.2); ctx.stroke(); }
+    for (let x = x0; x <= x1; x += 16) ctx.lineTo(x, w.y + Math.sin(x*.05 + w.t*2)*2.2); ctx.stroke(); }
   for (const g of W.gates){ const x = g.c*T, y0 = g.r0*T, wd = g.w*T, hgt = (g.r1 - g.r0 + 1)*T; if (!vis(x)) continue;
     ctx.save(); ctx.beginPath(); ctx.rect(x - 8, y0 - 6, wd + 16, hgt + 10); ctx.clip();
     if (g.look === 'stone'){ const sx = g.k*(wd/2 + 8); // створки разъезжаются в стороны
@@ -252,14 +252,17 @@ function drawCh6(){
 }
 // противовес: цепи, шестерни, медный фиксатор
 function drawCw(m){
-  const x = m.x, y = m.y, w = m.w, A = m.cwB || m;
-  ctx.strokeStyle = '#3A3036'; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
-  for (const cx of [x + 8, x + w - 8]){ ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, Math.min(m.y0, y) - 6*T); ctx.stroke(); } ctx.setLineDash([]);
-  pathRR(ctx, x, y, w, 14, 3); fillInk(ctx, '#6A5040', 2.2); ctx.fillStyle = '#8A6A50'; ctx.fillRect(x + 2, y + 1, w - 4, 3);
-  ctx.fillStyle = '#B8863A'; ctx.fillRect(x + 4, y + 6, w - 8, 3);
-  for (const gx of [x + 12, x + w - 12]){ ctx.save(); ctx.translate(gx, y + 7); ctx.rotate(A.k*6*(gx < x + w/2 ? 1 : -1)); gearPath(ctx, 6, 7, .3); fillInk(ctx, '#C9A15A', 1.2); ctx.restore(); }
-  if (m.cw){ ctx.save(); ctx.translate(x + w/2, y); ctx.fillStyle = '#4A3A30'; ctx.fillRect(-3, -16, 6, 16); ctx.beginPath(); ctx.arc(0, -20, 6, 0, Math.PI*2); fillInk(ctx, '#B8863A', 1.4);
-    ctx.globalCompositeOperation = 'lighter'; glow(0, -20, 26, 'rgba(255,210,140,A)', .35); ctx.restore();
+  // рисуем просто: на телефоне пунктир, шестерни-контуры и светящиеся градиенты на каждой платформе заметно тормозят
+  const x = m.x, y = m.y, w = m.w, A = m.cwB || m, top = Math.min(m.y0, y) - 6*T;
+  ctx.fillStyle = '#3A3036'; for (const cx of [x + 7, x + w - 10]) ctx.fillRect(cx, top, 3, y - top); // цепи
+  ctx.fillStyle = INK; ctx.fillRect(x - 1, y - 1, w + 2, 16); ctx.fillStyle = '#6A5040'; ctx.fillRect(x + 1, y + 1, w - 2, 12);
+  ctx.fillStyle = '#8A6A50'; ctx.fillRect(x + 2, y + 1, w - 4, 3); ctx.fillStyle = '#B8863A'; ctx.fillRect(x + 4, y + 6, w - 8, 3);
+  const a = A.k*6; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  for (const gx of [x + 12, x + w - 12]){ ctx.fillStyle = '#C9A15A'; ctx.beginPath(); ctx.arc(gx, y + 7, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(gx - Math.cos(a)*5, y + 7 - Math.sin(a)*5); ctx.lineTo(gx + Math.cos(a)*5, y + 7 + Math.sin(a)*5); ctx.stroke(); }
+  if (m.cw){ const lx = x + w/2; ctx.fillStyle = '#4A3A30'; ctx.fillRect(lx - 3, y - 16, 6, 16);
+    ctx.fillStyle = 'rgba(255,210,140,.22)'; ctx.beginPath(); ctx.arc(lx, y - 20, 14, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#F2C46A'; ctx.beginPath(); ctx.arc(lx, y - 20, 5, 0, Math.PI*2); ctx.fill();
     if (m.lock > 0){ ctx.strokeStyle = '#FFE3A8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + w/2, y - 40, 9, -Math.PI/2, -Math.PI/2 + Math.PI*2*m.lock/5); ctx.stroke(); } }
 }
 // Мгла снизу — рисуется поверх мира

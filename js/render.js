@@ -550,6 +550,7 @@ function drawDoor(d){
   ctx.strokeStyle = '#4A3A30'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 32, y + 14); ctx.lineTo(x + 32, y + d.h); ctx.moveTo(x + 8, y + 52); ctx.lineTo(x + 56, y + 52); ctx.stroke();
 }
 function drawMover(m){
+  if (m.x + m.w < S.cam.x - 40 || m.x > S.cam.x + VW + 40) return; // за экраном не рисуем
   if (m.cw || m.cwB){ drawCw(m); return; }
   const x = m.x, y = m.y, w = m.w, clock = theme() === THEMES.clock;
   if (m.shelf){ ctx.fillStyle = '#5A3A24'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = '#7A5634'; ctx.fillRect(x, y, w, 3); ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2);
