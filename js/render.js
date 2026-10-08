@@ -294,6 +294,43 @@ THEMES.dusk = Object.assign({}, THEMES.sky, {
     ctx.fillStyle = `rgba(40,70,140,${.38*k})`; ctx.fillRect(0, 0, VW, VH);
     const g = ctx.createLinearGradient(0, VH*.5, 0, VH); g.addColorStop(0, 'rgba(130,180,240,0)'); g.addColorStop(1, `rgba(130,180,240,${.3*k})`); ctx.fillStyle = g; ctx.fillRect(0, VH*.5, VW, VH*.5); }
 });
+// Глава 6, участок 1: глухая ночь над ратушей — та же улица, но холоднее и темнее, лучи фонарей патрулей
+THEMES.night = Object.assign({}, THEMES.street, {
+  over(){ ctx.fillStyle = 'rgba(8,14,40,.32)'; ctx.fillRect(0, 0, VW, VH);
+    const g = ctx.createLinearGradient(0, VH*.6, 0, VH); g.addColorStop(0, 'rgba(60,80,140,0)'); g.addColorStop(1, 'rgba(60,80,140,.22)'); ctx.fillStyle = g; ctx.fillRect(0, VH*.6, VW, VH*.4); }
+});
+// Глава 6, участок 3: древняя спиральная лестница над Мглой — гигантские пролёты, мягкий свет снизу
+THEMES.stair = {
+  floats:'dust', vignette:'rgba(4,10,24,.6)', stone:['#64707E','#58646F','#4C5763','#414B56','#36404A'], edge:'curb', spike:'metal',
+  sky(){
+    const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#060A18'); g.addColorStop(.55, '#0E2236'); g.addColorStop(1, '#2A5A70');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(VW*.5, VH*1.1 - S.cam.y*.05, VW*.7, 'rgba(110,200,220,A)', .22 + .04*Math.sin(S.time*.5));
+    for (let i=0;i<40;i++){ const x = ((hash(i,2,7) % 1000)/1000*VW*1.4 - S.cam.x*.05) % VW, y = VH - ((S.time*(8 + i%5*3) + i*53) % VH);
+      ctx.fillStyle = `rgba(${i%3 ? '170,225,240' : '255,214,150'},${.25 + .25*Math.sin(S.time + i)})`; ctx.fillRect((x + VW) % VW, y, 1.8, 1.8); }
+    ctx.restore();
+  },
+  layers(W, R){
+    const [w1, h1] = layerSize(.15, W), L1 = mk(w1, h1), a = L1.getContext('2d');
+    for (let x = 80; x < w1; x += 420 + R()*160){ // дальние витки лестницы — дуги ступеней вокруг колонн
+      const cx = x, top = h1*(.1 + R()*.15), bh = h1*.75; a.fillStyle = '#0C1A2A'; a.fillRect(cx - 26, top, 52, bh);
+      for (let i=0;i<14;i++){ const k = i/13, sx = cx + Math.sin(k*Math.PI*2.2)*120, sy = top + k*bh; a.fillStyle = `rgba(20,40,58,${.9 - k*.3})`; a.fillRect(sx - 34, sy, 68, 10); } }
+    const [w2, h2] = layerSize(.4, W), L2 = mk(w2, h2), b = L2.getContext('2d');
+    for (let x = -40; x < w2; x += 260 + R()*200){ const top = h2*(.05 + R()*.2), hh = h2*(.6 + R()*.3);
+      b.fillStyle = '#132638'; b.fillRect(x, top, 46 + R()*30, hh); b.fillStyle = 'rgba(160,220,240,.08)'; b.fillRect(x + 6, top, 4, hh);
+      if (R() < .6){ const y = top + hh*(.3 + R()*.4); b.fillStyle = '#16293C'; b.beginPath(); b.moveTo(x, y); b.lineTo(x + 180 + R()*80, y + 30); b.lineTo(x + 170 + R()*80, y + 48); b.lineTo(x, y + 20); b.fill(); } }
+    for (let x = 0; x < w2; x += 120 + R()*90){ const y = h2*.92; b.fillStyle = 'rgba(30,60,80,.7)'; b.beginPath(); b.moveTo(x, h2); b.lineTo(x + 10, y - R()*40); b.lineTo(x + 40, y - 20 - R()*30); b.lineTo(x + 60, h2); b.fill(); } // крыши Долинного города в тумане
+    return [{img:L1, par:.15}, {img:L2, par:.4}];
+  },
+  back(){ if (Math.random() < .01) noise(1.2, .008, 500, .3, 0, 'lowpass'); }, // песчаный шорох Мглы
+  over(){ const base = VH - (S.cam.y - (LH - VH))*.3;
+    const g = ctx.createLinearGradient(0, base - 260, 0, base + 40); g.addColorStop(0, 'rgba(120,200,225,0)'); g.addColorStop(1, 'rgba(120,200,225,.34)');
+    ctx.fillStyle = g; ctx.fillRect(0, base - 260, VW, 300);
+    ctx.save(); ctx.globalAlpha = .12 + .04*Math.sin(S.time*.6); ctx.fillStyle = '#BFEAF2';
+    for (let i=0;i<7;i++){ const x = ((i*220 - S.cam.x*.6 + S.time*12) % (VW + 300) + VW + 300) % (VW + 300) - 150; ctx.beginPath(); ctx.ellipse(x, base - 30 - (i%3)*18, 140, 18, 0, 0, Math.PI*2); ctx.fill(); }
+    ctx.restore(); }
+};
 const FIND_KINDS = {
   letter:{one:'Письмо', many:'Письма Черри'},
   boltik:{one:'Болтунчик', many:'Болтунчики Гисы'},
@@ -312,7 +349,7 @@ function buildLayers(){
   for (let i=0;i<4;i++){
     const c = mk(320, 300), x = c.getContext('2d'), RR = seeded(100 + i + S.ch*7);
     x.fillStyle = 'rgba(4,4,10,.9)';
-    if (kind === 'street'){ // фонарные столбы, перила, вывески
+    if (kind === 'street' || kind === 'night'){ // фонарные столбы, перила, вывески
       x.fillRect(150, 30, 12, 270); x.fillRect(110, 40, 90, 8); x.beginPath(); x.arc(118, 64, 14, 0, Math.PI*2); x.fill();
       x.fillRect(0, 230, 320, 10); for (let k=0;k<8;k++) x.fillRect(10 + k*40, 230, 6, 70);
     } else if (kind === 'clock'){ x.save(); x.translate(160, 220); gearPath(x, 90 + RR()*30, 10 + Math.floor(RR()*6)); x.fill(); x.restore(); }
@@ -323,6 +360,7 @@ function buildLayers(){
     FG.push(c);
   }
   FG.items = []; const R2 = seeded(31 + S.ch);
+  if (kind !== 'stair') // над Мглой на лестнице листьев на переднем плане нет
   for (let x = 400; x < W*1.3; x += 620 + R2()*480) FG.items.push({x, img:Math.floor(R2()*4), s:.6 + R2()*.35, flip:R2() < .5});
   GRAIN = mk(160, 160); const gx = GRAIN.getContext('2d'), id = gx.createImageData(160, 160);
   for (let i=0;i<id.data.length;i+=4){ const v = 128 + (Math.random()-.5)*90; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
@@ -512,6 +550,7 @@ function drawDoor(d){
   ctx.strokeStyle = '#4A3A30'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 32, y + 14); ctx.lineTo(x + 32, y + d.h); ctx.moveTo(x + 8, y + 52); ctx.lineTo(x + 56, y + 52); ctx.stroke();
 }
 function drawMover(m){
+  if (m.cw || m.cwB){ drawCw(m); return; }
   const x = m.x, y = m.y, w = m.w, clock = theme() === THEMES.clock;
   if (m.shelf){ ctx.fillStyle = '#5A3A24'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = '#7A5634'; ctx.fillRect(x, y, w, 3); ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2);
     for (let xx = x + 4; xx < x + w - 8; xx += 9){ const hh = 12 + (hash(xx|0, 1, 7) % 8); ctx.fillStyle = ['#7A3A2A','#3A5A6A','#8A7A3A','#4A3A5A'][hash(xx|0, 2, 5) % 4]; ctx.fillRect(xx, y - hh, 7, hh); }
@@ -524,12 +563,22 @@ function drawMover(m){
 }
 function drawWinds(){
   for (const w of S.W.winds){ if (w.x + w.w < S.cam.x || w.x > S.cam.x + VW) continue;
+    if (w.ether){ drawEther(w); continue; }
     const g = ctx.createLinearGradient(0, w.y + w.h, 0, w.y); g.addColorStop(0, 'rgba(230,240,255,.22)'); g.addColorStop(1, 'rgba(230,240,255,0)');
     ctx.fillStyle = g; ctx.fillRect(w.x, w.y, w.w, w.h);
     ctx.strokeStyle = 'rgba(240,248,255,.45)'; ctx.lineWidth = 2;
     for (let i=0;i<6;i++){ const xx = w.x + 8 + ((i*37) % (w.w - 16)), yy = w.y + w.h - ((S.time*300 + i*90) % w.h); ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 6, yy - 14, xx, yy - 28); ctx.stroke(); }
     ctx.fillStyle = '#5A4E5E'; ctx.fillRect(w.x - 4, w.y + w.h - 6, w.w + 8, 8); ctx.fillStyle = INK; for (let xx = w.x; xx < w.x + w.w; xx += 10) ctx.fillRect(xx, w.y + w.h - 6, 3, 8);
   }
+}
+// эфирный поток Первого Огня: сине-золотой туман и искорки по направлению потока
+function drawEther(w){
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(w.x, 0, w.x + w.w, 0); g.addColorStop(0, 'rgba(110,190,230,0)'); g.addColorStop(.5, `rgba(130,200,235,${w.diag ? .2 : .16})`); g.addColorStop(1, 'rgba(110,190,230,0)');
+  ctx.fillStyle = g; ctx.fillRect(w.x, w.y, w.w, w.h);
+  for (let i=0;i<7;i++){ const k = ((S.time*.7 + i/7) % 1), xx = w.x + w.w*(.2 + .6*((i*37 % 10)/10)) + (w.dx || 0)*k*w.w*.6, yy = w.y + w.h*(1 - k);
+    ctx.fillStyle = i % 2 ? `rgba(255,214,140,${.8*(1 - k)})` : `rgba(160,225,245,${.8*(1 - k)})`; ctx.fillRect(xx, yy, 2.4, 2.4); }
+  ctx.restore();
 }
 function drawDeco(dc){
   if (DECO_EXTRA[dc.kind]){ DECO_EXTRA[dc.kind](dc); return; }

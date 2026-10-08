@@ -52,7 +52,7 @@ function makeBuilder(cols, rows){
 }
 
 /* ================= Мир ================= */
-const SOLID = new Set(['#','o']);
+const SOLID = new Set(['#','o','g']); // g — решётка или каменная створка (глава 6)
 let S = null;
 function parseWorld(ch){
   const h = makeBuilder(ch.cols, ch.rows || 22);
@@ -182,7 +182,15 @@ function updatePlayer(dt){
   if (p.vy >= 0) p.jumping = false;
   // ветер: поток снизу поднимает вверх
   p.inWind = false;
-  for (const w of S.W.winds) if (overlap(p, w)){ p.inWind = true; p.vy = Math.max(-600, p.vy - 4200*dt); p.doubled = false; p.mover = null;
+  p.etherOut = Math.max(0, (p.etherOut || 0) - dt);
+  for (const w of S.W.winds) if (overlap(p, w)){
+    if (w.ether){ // эфирный поток Первого Огня (глава 6)
+      if (isDown() && !p.onGround) p.etherOut = .45; if (p.etherOut > 0) continue;
+      p.inWind = true; p.doubled = false; p.mover = null; p.jumping = false;
+      p.vy = approach(p.vy, -(isJump() ? 360 : 256), (p.vy > 0 ? 6500 : 2400)*dt); // падающую — подхватывает сразу if (w.dx) p.vx = approach(p.vx, w.dx*300 + dir*60, 1600*dt);
+      if (Math.random() < .35) S.particles.push({x:p.x + rnd(-8, 32), y:p.y + p.h, vx:w.dx*120 + rnd(-10,10), vy:-rnd(160,260), life:.6, t:0, c:pick(['rgba(150,220,240,.85)','rgba(255,214,140,.85)']), s:2.2, g:0, kind:'dot'});
+      break; }
+    p.inWind = true; p.vy = Math.max(-600, p.vy - 4200*dt); p.doubled = false; p.mover = null;
     if (Math.random() < .3) S.particles.push({x:p.x + rnd(-10, 34), y:p.y + p.h + 6, vx:rnd(-10,10), vy:-rnd(220,360), life:.5, t:0, c:'rgba(236,244,255,.75)', s:2, g:0, kind:'streak'}); }
   if (!p.inWind){ p.vy += G * dt * (p.vy > 0 ? FALL_MULT : 1); p.vy = Math.min(p.vy, MAX_FALL); }
   if (isDown() && p.onGround) p.drop = .2; else p.drop = Math.max(0, p.drop - dt);
@@ -207,6 +215,7 @@ function updatePlayer(dt){
       for (let dc=-1; dc<=1; dc++){ const f = S.W.fades[(gc+dc)+','+gr]; if (f && f.brittle && f.state === 'ok'){ f.state = 'gone'; f.perm = true; broke = true;
         burst(f.c*T + 16, f.r*T + 6, 12, ['#C9B79A','#9A8466','#6E5A44'], {angle:Math.PI/2, spread:1, min:20, max:140, g:600, kind:'paper'}); } }
       if (broke){ sfx.crumble(); camKick(4); p.onGround = false; p.groundTile = null; } }
+    if (fallV > 640 && p.mover && p.mover.cw) cwSlam(p.mover); // тяжёлое приземление на противовес (глава 6)
     if (fallV > 260){ squash(1 + .32*h + .08, 1 - .28*h - .06); sfx.land(h); dust(p.x + p.w/2, p.y + p.h, 4 + Math.round(h*8)); camKick(2 + h*5); if (h > .6) buzz(18); }
     p.lastFoot = p.phase;
   }
@@ -261,6 +270,7 @@ function updateWorld(dt, interact){
   }
   for (const m of W.movers){
     if (m.lever !== undefined){ moveShelf(m, dt); continue; }
+    if (m.cw || m.cwB){ moveCw(m, dt); continue; }
     m.t += dt; const k = (1 - Math.cos(m.t/m.period*Math.PI*2))/2, nx = lerp(m.x0, m.x1, k), ny = lerp(m.y0, m.y1, k);
     m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny;
   }
@@ -437,8 +447,8 @@ let journalOpen = false;
 
 /* ================= Сцены (визуальная новелла) =================
    Сцена: {title, lines:[{n:'Ая', t:'…', e:'happy', act(){…}}], left:'aya', right:'timofey', slides:true, end(){…}} */
-const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Странник':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta'};
-const NAMECOL = {aya:'#B9572A', timofey:'#7A5A3A', miko:'#7A3E9A', gisa:'#B9801A', axel:'#3E6E70', vran:'#7E2E3C', cherry:'#9A2F31', julia:'#2F7F66', marta:'#4E6E40'};
+const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Странник':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta','Эра':'era','Эрмина':'era'};
+const NAMECOL = {aya:'#B9572A', timofey:'#7A5A3A', miko:'#7A3E9A', gisa:'#B9801A', axel:'#3E6E70', vran:'#7E2E3C', cherry:'#9A2F31', julia:'#2F7F66', marta:'#4E6E40', era:'#5A6A9A'};
 function startScene(name, def0){
   const ch = curCh(), def = def0 || ch.scenes[name]; if (!def){ console.warn('нет сцены', name); return; }
   const lines = def.lines, hero = def.left === undefined ? 'aya' : def.left;
@@ -651,7 +661,7 @@ const api = {
   unlockDouble(){ S.canDouble = true; sfx.unlock(); embers(S.P.x + 12, S.P.y + 10, 30); },
   chase(cfg){ startChase(cfg); }, alarm(){ alarmGuards(); }, mist(o){ startMist(o); setMusic(true, 'mist'); },
   openExit(){ S.flags.exitOpen = true; }, complete(){ chapterComplete(); },
-  music(m, vol){ setMusic(true, m, vol); }, cut(){ musicCut(); }, swell(vol, sec){ musicSwell(vol, sec); }, rise(o){ startRise(o); }, flag(k, v=true){ S.flags[k] = v; },
+  music(m, vol){ setMusic(true, m, vol); }, cut(){ musicCut(); }, swell(vol, sec){ musicSwell(vol, sec); }, rise(o){ startRise(o); }, flag(k, v=true){ S.flags[k] = v; }, signal(id, v=true){ S.W.forced[id] = v; },
   iskraTo(c, r){ S.V.away = {x:c*T + 16, y:r*T}; }, iskraBack(){ S.V.away = null; },
   checkpoint(c, r){ S.P.checkpoint = {x:c*T, y:r*T - S.P.h}; S.checkpointOverride = {x:c*T, y:r*T - S.P.h}; },
   card(){ startCard(); },

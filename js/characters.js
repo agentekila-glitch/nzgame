@@ -26,7 +26,12 @@ const CH = {
   guard:{ name:'Стражник', skin:'#EBCDB6', blush:'#DDA08C', hair:'#3A2E28', hairHi:'#5A4A40', eye:'#3A3A4A',
     top:'#2E3E5E', topHi:'#40547A', trim:'#C9A15A', obi:'#1E2638', legs:'#22283A', boots:'#141018', hand:'#EBCDB6', scale:1.04 },
   elder:{ name:'Старейшина', skin:'#EDD0BA', blush:'#DFA290', hair:'#E8E4DC', hairHi:'#FFFFFF', eye:'#4A3A2E',
-    top:'#4A2E3E', topHi:'#6A4458', trim:'#D9B24A', obi:'#2A1A24', legs:'#3A2A34', boots:'#1E161C', hand:'#EDD0BA' }
+    top:'#4A2E3E', topHi:'#6A4458', trim:'#D9B24A', obi:'#2A1A24', legs:'#3A2A34', boots:'#1E161C', hand:'#EDD0BA' },
+  // глава 6: Эрмина (Эра) — архивистка в кожаной куртке, с планшетом чертежей; наёмники Врана
+  era:{ name:'Эра', skin:'#F3D8C4', blush:'#EBA08E', hair:'#3A3048', hairHi:'#6A5A82', eye:'#4E7A6A',
+    top:'#7A5238', topHi:'#9A6E4E', trim:'#C9A15A', obi:'#3A2A22', legs:'#34343F', boots:'#2A2024', hand:'#F3D8C4' },
+  merc:{ name:'Наёмник', skin:'#E6C8B0', blush:'#D89C88', hair:'#2A2224', hairHi:'#4A3E40', eye:'#3A2A2A',
+    top:'#4E2228', topHi:'#6A3038', trim:'#8A8A94', obi:'#1E1618', legs:'#24202A', boots:'#141016', hand:'#2A2226', scale:1.06 }
 };
 function pathRR(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 function fillInk(c, fill, lw=2){ c.fillStyle = fill; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(); }
@@ -50,6 +55,25 @@ const CHAR_PARTS = {
     front(c, k){ c.beginPath(); c.moveTo(-13.6, -2); c.quadraticCurveTo(-14, -14, 0, -15.5); c.quadraticCurveTo(14, -14, 13.6, -2); c.closePath(); fillInk(c, k.top);
       c.beginPath(); c.moveTo(-14, -2); c.lineTo(16, -2); c.lineTo(17, 1); c.lineTo(-13, 1); c.closePath(); fillInk(c, '#141824', 1.4);
       c.beginPath(); c.arc(1, -8, 3, 0, Math.PI*2); fillInk(c, k.trim, 1.2); }
+  },
+  // Эра: волосы до плеч с прямой чёлкой, коса через плечо, ремень планшета с чертежами
+  era:{
+    back(c, k, P){ const {swx, swy} = P;
+      c.save(); c.translate(-9, -24); c.rotate(-.25); pathRR(c, -4, -9, 8, 18, 1.5); fillInk(c, '#E8DCC0', 1.4); c.restore();
+      c.beginPath(); c.moveTo(-7, -55); c.bezierCurveTo(-18, -52, -18, -40, -15 - swx*.3, -32 + swy*.2); c.lineTo(8, -32); c.quadraticCurveTo(13, -46, 8, -54); c.closePath(); fillInk(c, k.hair); },
+    torso(c, k){
+      c.beginPath(); c.moveTo(-8, -29); c.lineTo(9, -13); c.lineWidth = 2.4; c.strokeStyle = '#3E2C22'; c.stroke();
+      pathRR(c, 4, -18, 9, 7, 1.5); fillInk(c, '#E8DCC0', 1.2);
+      c.beginPath(); c.moveTo(0.5, -29); c.lineTo(0.5, -12); c.lineWidth = 1.2; c.strokeStyle = '#3A2618'; c.stroke(); },
+    front(c, k, P){ const {swx, swy} = P;
+      c.beginPath(); c.moveTo(-13.4, 0); c.quadraticCurveTo(-14, -12, 0, -13.6); c.quadraticCurveTo(13, -13, 13.4, -1); c.lineTo(12, -4); c.lineTo(-12, -4); c.closePath(); fillInk(c, k.hair);
+      c.beginPath(); c.moveTo(11, -2); c.quadraticCurveTo(15 - swx*.2, 8, 12 - swx*.3, 20 + swy*.2); c.lineWidth = 4.4; c.strokeStyle = INK; c.stroke(); c.lineWidth = 2.8; c.strokeStyle = k.hair; c.stroke();
+      c.beginPath(); c.arc(12 - swx*.3, 21 + swy*.2, 1.8, 0, Math.PI*2); fillInk(c, '#C9A15A', 1); }
+  },
+  merc:{
+    torso(c, k){ c.beginPath(); c.moveTo(-8, -29); c.lineTo(8, -14); c.lineWidth = 2.4; c.strokeStyle = '#1A1214'; c.stroke(); pathRR(c, -10, -17, 20, 3.4, 1.6); fillInk(c, '#1A1214', 1.4); },
+    front(c, k){ c.beginPath(); c.moveTo(-13.6, 2); c.quadraticCurveTo(-14, -13, 0, -14.6); c.quadraticCurveTo(13, -13, 13.6, 2); c.quadraticCurveTo(4, -6, -13.6, 2); fillInk(c, '#2A2224');
+      c.beginPath(); c.moveTo(-6, 6); c.lineTo(14, 6); c.lineTo(13, 11); c.lineTo(-5, 11); c.closePath(); fillInk(c, '#3A2A2E', 1.2); }
   },
   // старейшина Совета: длинные седые волосы и борода
   elder:{
@@ -641,7 +665,9 @@ Object.assign(VN, {
   axel:{ skin:'#EFD2BE', skinSh:'#D6AE96', blush:'#DDA48E', lip:'#A8645C',
     hair:'#141828', hairMid:'#283252', hairHi:'#7C8EC4', iris:['#4A2406','#E39A2A','#FFE19A'], name:'#1E7A84', male:true },
   vran:{ skin:'#F4E2D4', skinSh:'#DEC2AE', blush:'#E8A79A', lip:'#A85460',
-    hair:'#17131D', hairMid:'#2E283A', hairHi:'#6E6486', iris:['#3A0E16','#8C2E3A','#E8949A'], name:'#7E2E3C', male:true, eyeH:.68, browW:4 }
+    hair:'#17131D', hairMid:'#2E283A', hairHi:'#6E6486', iris:['#3A0E16','#8C2E3A','#E8949A'], name:'#7E2E3C', male:true, eyeH:.68, browW:4 },
+  era:{ skin:'#FAE2D2', skinSh:'#E8BEA8', blush:'#EE9E92', lip:'#B95C5E',
+    hair:'#2E2638', hairMid:'#463A56', hairHi:'#8A7AA8', iris:['#1E3A30','#4E7A6A','#A8D8C0'], name:'#5A6A9A' }
 });
 // ---------- АЯ: медные волосы до плеч с низким хвостом, тёмно-синее пальто, оранжевый шарф, ремень сумки
 function vnAya(c, st){
@@ -928,8 +954,49 @@ function vnVran(c, st){
   c.restore();
 }
 
-const VN_DRAW = {aya:vnAya, timofey:vnTimofey, miko:vnMiko, gisa:vnGisa, axel:vnAxel, vran:vnVran, cherry:vnCherry, marta:vnMarta, julia:vnJulia};
-const VN_H = {aya:480, timofey:500, miko:540, gisa:480, axel:480, vran:480, cherry:480, marta:660, julia:480};
+// ---------- ЭРА (Эрмина): прямая чёлка, коса через плечо, кожаная куртка со стойкой, ремень планшета, тубус с чертежами
+function vnEra(c, st){
+  const k = VN.era, t = st.t, sw = Math.sin(t*1.3)*3;
+  c.save(); c.translate(-108, -236); c.rotate(-.42 + Math.sin(t*.9)*.01); // тубус с чертежами за спиной
+  pathRR(c, -16, -96, 32, 150, 12); c.fillStyle = gradV(c, -96, 54, '#7A5A40', '#4E3626'); c.fill(); ink(c, 2.6);
+  c.beginPath(); c.ellipse(0, -96, 16, 6, 0, 0, Math.PI*2); c.fillStyle = '#F0E6D0'; c.fill(); ink(c, 2);
+  c.strokeStyle = '#C9A15A'; c.lineWidth = 4; for (const yy of [-60, 20]){ c.beginPath(); c.moveTo(-16, yy); c.lineTo(16, yy); c.stroke(); }
+  c.restore();
+  headOn(c);
+  c.beginPath(); c.moveTo(-72, -392); c.bezierCurveTo(-106, -326, -100, -262, -88 + sw*.3, -214); c.lineTo(80, -218);
+  c.bezierCurveTo(102, -266, 106, -330, 90, -390); c.bezierCurveTo(76, -440, 42, -458, 4, -458); c.bezierCurveTo(-36, -458, -62, -434, -72, -392); c.closePath();
+  c.fillStyle = hairShade(c, k, -458, -214); c.fill(); ink(c, 3);
+  c.restore();
+  torso(c); c.fillStyle = gradV(c, -200, 10, '#8E6244', '#5A3A28'); c.fill(); ink(c, 3);
+  c.save(); torso(c); c.clip(); c.fillStyle = 'rgba(255,230,200,.12)'; c.beginPath(); c.ellipse(-60, -120, 40, 90, -.2, 0, Math.PI*2); c.fill(); c.restore();
+  vnNeck(c, k);
+  c.beginPath(); c.moveTo(-36, -198); c.lineTo(-30, -166); c.quadraticCurveTo(4, -148, 40, -166); c.lineTo(46, -198); c.quadraticCurveTo(4, -184, -36, -198); c.closePath();
+  c.fillStyle = '#6E4630'; c.fill(); ink(c, 2.4);
+  c.beginPath(); c.moveTo(4, -156); c.lineTo(4, 12); c.lineWidth = 3; c.strokeStyle = '#3A2618'; c.stroke();
+  for (let yy = -146; yy < 10; yy += 14){ c.beginPath(); c.moveTo(0, yy); c.lineTo(8, yy); c.lineWidth = 1.6; c.strokeStyle = '#C9A15A'; c.stroke(); }
+  c.beginPath(); c.moveTo(-74, -182); c.lineTo(118, 2); c.lineTo(140, -12); c.lineTo(-50, -196); c.closePath(); c.fillStyle = '#3E2C22'; c.fill(); ink(c, 2.2); // ремень планшета
+  pathRR(c, 22, -112, 22, 16, 3); c.fillStyle = '#C9A15A'; c.fill(); ink(c, 1.8);
+  // увеличительное стекло на шнурке
+  c.beginPath(); c.moveTo(-20, -176); c.quadraticCurveTo(-36, -120, -44, -90); c.lineWidth = 1.6; c.strokeStyle = '#2A1A10'; c.stroke();
+  c.beginPath(); c.arc(-46, -76, 13, 0, Math.PI*2); c.fillStyle = 'rgba(190,230,240,.55)'; c.fill(); c.lineWidth = 4; c.strokeStyle = '#B8863A'; c.stroke(); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke();
+  armSeams(c);
+  headOn(c);
+  vnFaceAll(c, k, st);
+  bangs(c, k, [[-70,-336],[-86,-428],[-18,-468],[18,-462],[76,-456],[100,-404],[86,-338]],
+    [[86,-344],[60,-350],[34,-348],[8,-350],[-18,-348],[-44,-350],[-66,-344]],
+    [[76,-320],[50,-322],[24,-320],[-2,-322],[-28,-320],[-54,-322]], -2);
+  vnBrowsOver(c, st, k);
+  // коса через правое плечо
+  lock(c, 70, -346, 98, -300, 92 + sw*.4, -250, 100 + sw*.5, -196, 13, k.hairMid);
+  for (let i=0;i<6;i++){ const y = -300 + i*24, x = 96 + sw*.45*(i/6) + (i%2 ? 3 : -3); c.beginPath(); c.ellipse(x, y, 12, 13, (i%2 ? .5 : -.5), 0, Math.PI*2); c.fillStyle = i%2 ? k.hairMid : k.hair; c.fill(); ink(c, 2.2); }
+  pathRR(c, 88 + sw*.5, -164, 18, 10, 3); c.fillStyle = '#C9A15A'; c.fill(); ink(c, 1.8);
+  c.beginPath(); c.moveTo(102 + sw*.5, -154); c.quadraticCurveTo(108 + sw*.6, -138, 100 + sw*.6, -126); c.lineTo(110 + sw*.6, -132); c.closePath(); c.fillStyle = k.hair; c.fill(); ink(c, 2);
+  // карандаш за ухом
+  c.save(); c.translate(-74, -350); c.rotate(-.9); pathRR(c, -4, -30, 8, 46, 2); c.fillStyle = '#E8B84A'; c.fill(); ink(c, 2); c.beginPath(); c.moveTo(-4, 16); c.lineTo(0, 26); c.lineTo(4, 16); c.closePath(); c.fillStyle = '#F0D8B0'; c.fill(); ink(c, 1.6); c.restore();
+  c.restore();
+}
+const VN_DRAW = {aya:vnAya, timofey:vnTimofey, miko:vnMiko, gisa:vnGisa, axel:vnAxel, vran:vnVran, cherry:vnCherry, marta:vnMarta, julia:vnJulia, era:vnEra};
+const VN_H = {aya:480, timofey:500, miko:540, gisa:480, axel:480, vran:480, cherry:480, marta:660, julia:480, era:480};
 // ---------- сцена новеллы: слоты, затемнение, вход
 const vnBuf = {}; function vnCanvas(id){ if (!vnBuf[id]) vnBuf[id] = mk(520, 720); return vnBuf[id]; }
 function renderVN(){

@@ -85,6 +85,7 @@ function showEnd(){
     $('stFind').textContent = `${sum('finds')}/${sum('total')}`; $('stDrops').textContent = sum('drops'); $('stFaint').textContent = sum('faints'); $('stTime').textContent = fmtTime(sum('play')); }
   $('endNote').innerHTML = ch.endNote || ''; $('endNote').hidden = !ch.endNote;
   $('endNext').textContent = last ? 'В главное меню' : `Далее: ${CHAPTERS[S.ch + 1].title}`;
+  $('endMenu').hidden = last; // в последней главе две одинаковые кнопки не нужны
   const fin = last ? 'Продолжение следует.' : (ch.partEnd || ''); $('endFinal').textContent = fin; $('endFinal').hidden = !fin;
   showScreen('end');
 }
@@ -159,15 +160,24 @@ $('kReset').addEventListener('click', () => { SET.keys = null; saveSettings(); r
 
 /* ================= Экранные кнопки ================= */
 // Позиции — в долях «безопасной» области кадра (без выреза и кнопок Telegram)
-// Справа столбиком: прыжок сверху, спуск под ним. Слева — движение.
-const TC_STD = {left:[.09,.8], right:[.24,.8], jump:[.9,.55], down:[.9,.83]};
-if (SET.tcVer !== 2){ SET.tcPos = null; SET.tcVer = 2; saveSettings(); } // новая раскладка — старые перестановки сбрасываем один раз
-function tcPos(k){ const p = SET.tcPos && SET.tcPos[k]; if (p) return p; const d = TC_STD[k]; return SET.tcLayout === 'left' ? [1 - d[0], d[1]] : d; }
+// По умолчанию кнопки стоят парами у нижних углов, а расстояния считаются от размера кнопки:
+// слева ◀ ▶ с зазором в четверть кнопки, справа столбиком ▲ над ▼. При любом размере пары не разъезжаются.
+if (SET.tcVer !== 3){ SET.tcPos = null; SET.tcVer = 3; saveSettings(); } // новая раскладка — старые перестановки сбрасываем один раз
+let TCG = {sw:900, sh:400, s:80};
+function tcDefault(k){
+  const {sw, sh} = TCG, s = Math.min(TCG.s, sh/3.4), m = 14, low = sh - m;
+  const P = {left:[m + .7*s, low - .75*s], right:[m + 1.95*s, low - .75*s],
+    down:[sw - m - .75*s, low - .7*s], jump:[sw - m - .75*s, low - 1.99*s]}; // ▲ в 1.18 раза больше: над ▼ с зазором 0.2 кнопки
+  let [x, y] = P[k]; if (SET.tcLayout === 'left') x = sw - P[k === 'left' ? 'right' : k === 'right' ? 'left' : k][0]; // зеркально, но ◀ остаётся левее ▶
+  return [x/sw, y/sh];
+}
+function tcPos(k){ const p = SET.tcPos && SET.tcPos[k]; return p || tcDefault(k); }
 let HUDPX = {t:0, r:0, b:0, l:0};
 function applyTouchLayout(){
   const st = $('stage'), W = st.clientWidth || 960, H = st.clientHeight || 540;
   const sw = W - HUDPX.l - HUDPX.r, sh = H - HUDPX.t - HUDPX.b;
   const base = clamp(Math.min(W, H*1.8) * .12, 76, 124) * SET.tcSize;
+  TCG = {sw, sh, s:base};
   st.style.setProperty('--tcs', base + 'px'); st.style.setProperty('--tca', SET.tcAlpha);
   for (const b of document.querySelectorAll('#touch .tb')){ const [x, y] = tcPos(b.dataset.k);
     b.style.left = (HUDPX.l + sw*x) + 'px'; b.style.top = (HUDPX.t + sh*y) + 'px'; }
