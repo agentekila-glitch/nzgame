@@ -26,7 +26,7 @@ function showMenu(){
   $('mPlayInfo').textContent = d ? 'Продолжить: ' + info : 'Начать историю';
   const cards = CHAPTERS.filter(c => !c.group || c.partNo === 1), open = cards.filter(c => c.index <= prog.unlocked).length; // участки главы — одна карточка
   $('mChInfo').textContent = `Открыто ${open} из ${cards.length}`;
-  $('mWords').hidden = !(prog.done || []).includes('ch8'); // послесловие — после финала первой части
+  const mw = $('mWords'); if (mw) mw.hidden = !(prog.done || []).includes('ch8'); // послесловие — после финала первой части
   setMusic(true, 'menu');
 }
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }

@@ -45,4 +45,4 @@ function wordsNext(){
 function wordsEnd(){ const w = wordsState; if (!w) return; wordsState = null; $('words').hidden = true; w.onDone(); }
 $('words').addEventListener('pointerdown', e => { if (e.target.closest('button')) return; e.stopPropagation(); wordsNext(); });
 $('wSkip').addEventListener('click', e => { e.stopPropagation(); wordsEnd(); });
-$('mWords').addEventListener('click', () => showWords({onDone:showMenu}));
+if ($('mWords')) $('mWords').addEventListener('click', () => showWords({onDone:showMenu}));
