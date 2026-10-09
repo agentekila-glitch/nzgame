@@ -331,6 +331,45 @@ THEMES.stair = {
     for (let i=0;i<7;i++){ const x = ((i*220 - S.cam.x*.6 + S.time*12) % (VW + 300) + VW + 300) % (VW + 300) - 150; ctx.beginPath(); ctx.ellipse(x, base - 30 - (i%3)*18, 140, 18, 0, 0, Math.PI*2); ctx.fill(); }
     ctx.restore(); }
 };
+// Глава 7: Долинный город под Мглой — сверху светящийся «потолок» тумана, внизу руины, тёплые огни очагов
+THEMES.valley = {
+  floats:'dust', vignette:'rgba(2,10,16,.6)', stone:['#56636A','#4C585F','#424D54','#384249','#2F383E'], edge:'curb', spike:'metal',
+  sky(){
+    const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#3E7E8A'); g.addColorStop(.35, '#163A48'); g.addColorStop(1, '#0A1820');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; // Мгла сверху: медленные светлые волны
+    for (let i=0;i<5;i++){ const x = ((i*300 - S.cam.x*.05 + S.time*6) % (VW + 400) + VW + 400) % (VW + 400) - 200;
+      glow(x, 10 + (i%2)*30 - S.cam.y*.03, 260, 'rgba(150,220,230,A)', .12 + .04*Math.sin(S.time*.4 + i)); }
+    for (let i=0;i<30;i++){ const x = ((hash(i,5,9) % 1000)/1000*VW*1.4 - S.cam.x*.04) % VW, y = ((S.time*(5 + i%4*2) + i*61) % VH);
+      ctx.fillStyle = `rgba(${i%3 ? '170,225,240' : '255,200,140'},${.2 + .2*Math.sin(S.time + i)})`; ctx.fillRect((x + VW) % VW, y, 1.8, 1.8); } // искорки сыплются сверху вниз
+    ctx.restore();
+  },
+  layers(W, R){
+    const [w1, h1] = layerSize(.16, W), L1 = mk(w1, h1), a = L1.getContext('2d');
+    for (let x = -40; x < w1;){ const w = 60 + R()*90, hh = h1*(.25 + R()*.35), base = h1*.92; // дальние башни и купола в тумане
+      a.fillStyle = '#123040'; a.fillRect(x, base - hh, w, hh + 100);
+      if (R() < .5){ a.beginPath(); a.arc(x + w/2, base - hh, w/2, Math.PI, 0); a.fill(); } else { a.beginPath(); a.moveTo(x - 4, base - hh); a.lineTo(x + w/2, base - hh - 30 - R()*40); a.lineTo(x + w + 4, base - hh); a.fill(); }
+      for (let i=0;i<4;i++) if (R() < .35){ const wx = x + 8 + R()*(w - 16), wy = base - hh + 20 + R()*hh*.6; glowOn(a, wx, wy, 18, 'rgba(255,160,90,A)', .35); a.fillStyle = 'rgba(255,190,120,.8)'; a.fillRect(wx - 2, wy - 3, 4, 6); }
+      x += w + 10 + R()*40; }
+    a.fillStyle = 'rgba(120,200,215,.07)'; a.fillRect(0, h1*.55, w1, h1*.45);
+    const [w2, h2] = layerSize(.4, W), L2 = mk(w2, h2), b = L2.getContext('2d');
+    for (let x = 0; x < w2; x += 520 + R()*260){ const y = h2*(.35 + R()*.15), n = 3 + Math.floor(R()*3); // разрушенный акведук: арки
+      for (let i=0;i<n;i++){ const ax = x + i*90; b.fillStyle = '#1A3440'; b.fillRect(ax, y, 90, 22); b.fillRect(ax, y, 16, h2 - y); b.fillStyle = '#0F242E'; b.beginPath(); b.arc(ax + 53, y + 60, 37, Math.PI, 0); b.lineTo(ax + 90, y + 22); b.lineTo(ax + 16, y + 22); b.fill(); } }
+    for (let x = -20; x < w2;){ const w = 90 + R()*120, hh = 120 + R()*200, base = h2*.9; b.fillStyle = R() < .5 ? '#18303A' : '#1C3640'; b.fillRect(x, base - hh, w, hh + 200);
+      b.fillStyle = '#21404A'; b.beginPath(); b.moveTo(x - 8, base - hh); b.lineTo(x + w*.3, base - hh - 20 - R()*30); b.lineTo(x + w*.55, base - hh - 6); b.lineTo(x + w + 8, base - hh); b.fill(); // обломанная крыша
+      for (let y = base - hh + 22; y < base - 20; y += 40) for (let xx = x + 12; xx < x + w - 20; xx += 30){ const lit = R() < .07; b.fillStyle = lit ? 'rgba(255,170,90,.8)' : 'rgba(6,14,18,.85)'; b.fillRect(xx, y, 12, 18); if (lit) glowOn(b, xx + 6, y + 9, 24, 'rgba(255,160,80,A)', .25); }
+      b.fillStyle = 'rgba(90,170,150,.18)'; for (let i=0;i<3;i++) b.fillRect(x + R()*w, base - hh, 3, 20 + R()*60); // мох
+      x += w + 14 + R()*40; }
+    return [{img:L1, par:.16}, {img:L2, par:.4}];
+  },
+  back(){ if (Math.random() < .008) sfx.drip(); },
+  over(){ const base = VH - (S.cam.y - (LH - VH))*.3;
+    const g = ctx.createLinearGradient(0, base - 240, 0, base + 40); g.addColorStop(0, 'rgba(110,190,210,0)'); g.addColorStop(1, 'rgba(110,190,210,.32)');
+    ctx.fillStyle = g; ctx.fillRect(0, base - 240, VW, 280);
+    ctx.save(); ctx.globalAlpha = .1 + .03*Math.sin(S.time*.5); ctx.fillStyle = '#BFE6EE';
+    for (let i=0;i<6;i++){ const x = ((i*260 - S.cam.x*.7 + S.time*10) % (VW + 300) + VW + 300) % (VW + 300) - 150; ctx.beginPath(); ctx.ellipse(x, base - 40 - (i%3)*22, 150, 18, 0, 0, Math.PI*2); ctx.fill(); }
+    ctx.restore(); }
+};
 const FIND_KINDS = {
   letter:{one:'Письмо', many:'Письма Черри'},
   boltik:{one:'Болтунчик', many:'Болтунчики Гисы'},
@@ -360,7 +399,7 @@ function buildLayers(){
     FG.push(c);
   }
   FG.items = []; const R2 = seeded(31 + S.ch);
-  if (kind !== 'stair') // над Мглой на лестнице листьев на переднем плане нет
+  if (kind !== 'stair' && kind !== 'valley') // над Мглой и под ней листьев на переднем плане нет
   for (let x = 400; x < W*1.3; x += 620 + R2()*480) FG.items.push({x, img:Math.floor(R2()*4), s:.6 + R2()*.35, flip:R2() < .5});
   GRAIN = mk(160, 160); const gx = GRAIN.getContext('2d'), id = gx.createImageData(160, 160);
   for (let i=0;i<id.data.length;i+=4){ const v = 128 + (Math.random()-.5)*90; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
@@ -552,6 +591,7 @@ function drawDoor(d){
 function drawMover(m){
   if (m.x + m.w < S.cam.x - 40 || m.x > S.cam.x + VW + 40) return; // за экраном не рисуем
   if (m.cw || m.cwB){ drawCw(m); return; }
+  if (m.heat !== undefined || m.echo){ drawCh7Mover(m); return; }
   const x = m.x, y = m.y, w = m.w, clock = theme() === THEMES.clock;
   if (m.shelf){ ctx.fillStyle = '#5A3A24'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = '#7A5634'; ctx.fillRect(x, y, w, 3); ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2);
     for (let xx = x + 4; xx < x + w - 8; xx += 9){ const hh = 12 + (hash(xx|0, 1, 7) % 8); ctx.fillStyle = ['#7A3A2A','#3A5A6A','#8A7A3A','#4A3A5A'][hash(xx|0, 2, 5) % 4]; ctx.fillRect(xx, y - hh, 7, hh); }

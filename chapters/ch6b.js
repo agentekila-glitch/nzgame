@@ -36,7 +36,7 @@ chapter({
     h.cw(153, S0, 3, {drop:4, pair:[158, W0 + 1, 6]});
     h.sparks(135, 4, S0 - 2); h.sparks(147, 4, S0 - 2); h.sparks(159, 4, S0 - 2);
     h.block(164, 165, W0, W0); h.findx(164, W0 - 1, 'Медный жетон подмастерья', 'token'); // находка 4 — внизу у самой воды
-    h.ground(166, 200, S0);
+    h.ground(166, 200, S0); h.lamp(167, S0 - 1);
     h.guard(168, 182, S0, {see:5, speed:45, who:'merc'});                // наёмник Врана у замка
     h.keylock(186, S0, 'g1');
     h.gate(189, 14, S0 - 1, 'g1', {look:'stone', w:2});
@@ -46,8 +46,8 @@ chapter({
     h.deco('pillar', 216, S0, {h:7}); h.deco('pillar', 262, S0, {h:5});
     h.shade(222, S0 - 1);
     h.clear(235, 250, S0, 29); h.slowFade(235, 16, S0);               // оседающие плиты над провалом
-    h.sparks(238, 10, S0 - 2); h.moth(244, S0 - 5);
-    h.ground(251, 290, S0); h.shade(258, S0 - 1);
+    h.sparks(238, 10, S0 - 2);
+    h.ground(251, 290, S0);
     h.guard(256, 280, S0, {see:6, speed:60, who:'merc'});
     h.block(282, 287, 16, S0 - 1); h.findx(285, 15, 'Обгоревшая клятва Хранителей', 'oath'); // находка 5 — в нише разрушенной колонны
     // D. Замурованная арка
@@ -58,9 +58,9 @@ chapter({
     h.npc('era2', 'era', 327, S0, {face:1, lookAt:false}); // Эра пришла своими лазами и ждёт у противовеса
     h.npc('axel', 'axel', 340, S0, {face:-1, lookAt:false, barks:['Тише.', 'Внизу не смотри.', 'Мгла близко.']});
     h.npc('vran', 'vran', 296, S0, {hidden:true, face:1, lookAt:false});
-    h.npc('merc1', 'merc', 292, S0, {hidden:true, face:1, lookAt:false}); h.npc('merc2', 'merc', 289, S0, {hidden:true, face:1, lookAt:false}); h.npc('merc3', 'merc', 286, S0, {hidden:true, face:1, lookAt:false});
+    h.npc('merc1', 'merc', 292, S0, {hidden:true, face:1, lookAt:false}); h.npc('merc2', 'merc', 289, S0, {hidden:true, face:1, lookAt:false}); h.npc('merc3', 'merc', 290, S0, {hidden:true, face:1, lookAt:false});
     h.trig(332, 'arch');
-    h.keylock(338, S0, 'arch', {need:3, when:() => S.flags.t_arch, scene:'opened'});
+    h.keylock(338, S0, 'arch', {when:() => S.flags.t_arch, scene:'opened'});
     h.gate(346, 12, S0 - 1, 'arch', {look:'stone', w:8});            // каменные створки выше двойного прыжка
     h.exit(364);
   },
@@ -101,7 +101,7 @@ chapter({
       {n:'', t:'Эра вставляет тяжёлый стальной лом в шестерню архивного затвора. Тяжёлая решётка с грохотом падает и отрезает наёмников Врана.', act(){ api.signal('jam'); api.shake(.6); }},
       {n:'Вран', e:'angry', t:'Дрянь!.. Снесите эту решётку!'},
       {n:'Странник', t:'Поворачивай, Ая. Быстро!'}
-    ], end(){ api.focus(null); setMusic(true, 'tense'); api.shade(326, S0); api.shade(343, S0); saveGame(true); } },
+    ], end(){ api.focus(null); setMusic(true, 'tense'); api.checkpoint(334, S0); saveGame(true); } }, // возвращаться — по эту сторону решётки
     opened:{ music:'eerie', title:'Печать снята', lines:[
       {n:'', t:'Ая вставляет Медный ключ в розетку и поворачивает его всем весом.', act(){ api.focus(350, S0 - 4); }},
       {n:'', t:'Огромные гранитные блоки со скрежетом раздвигаются, обнажая тёмный проход со спиральной лестницей, уходящей вниз.', act(){ api.shake(1); }}

@@ -2,14 +2,15 @@
 /* =====================================================================
    Механики глав 5–6: колокол-ориентир, оседающие плиты, хрупкие полки, рычаги и стеллажи,
    стража гильдии (зоны видимости), спокойно поднимающаяся Мгла, именные находки;
-   с главы 6 — архивные противовесы, эфирные потоки, замки Хранителей под Медный ключ, решётки, вода.
+   с главы 6 — архивные противовесы, эфирные потоки, замки Хранителей под Медный ключ, решётки, вода;
+   с главы 7 — очаги Долины и парящие плиты, эхо Мглы, резонансные колокола, сгустки Мглы, плита Джей.
    Подключается после engine.js; движок вызывает extendBuilder / parseMech / updateMech / drawMech.
    ===================================================================== */
 
 // ---------- Помощники для build(h) ----------
 function extendBuilder(h, out, F){
   out.levers = []; out.guards = []; out.bells = []; out.findInfo = {}; out.slow = []; out.brittle = [];
-  out.gates = []; out.keylocks = []; out.waters = [];
+  out.gates = []; out.keylocks = []; out.waters = []; out.switches = [];
   Object.assign(h, {
     // плиты, которые оседают через полторы секунды после того, как на них встали
     slowFade(a, len, r){ for (let i=0;i<len;i++){ h.put(a+i, r, 'f'); out.slow.push((a+i)+','+r); } },
@@ -44,7 +45,22 @@ function extendBuilder(h, out, F){
     // наклонный поток под 45°: лесенка из квадратов 3×3, n шагов от (c, r) вверх в сторону dir
     draftDiag(c, r, n, dir){ for (let i=0;i<n;i++) out.winds.push({x:(c + dir*i*2)*T, y:(r - i*2 - 2)*T, w:3*T, h:3*T, ether:true, dx:dir, diag:true}); },
     // вода в провале: коснулась — назад к фонарю
-    water(c0, c1, r){ out.waters.push({x:c0*T, w:(c1-c0+1)*T, y:r*T + 8, t:0}); }
+    water(c0, c1, r){ out.waters.push({x:c0*T, w:(c1-c0+1)*T, y:r*T + 8, t:0}); },
+    // ----- глава 7 -----
+    // очаг Долины: каменная чаша в полу ряда r. Коснулась — вспыхивает на dur секунд и даёт сигнал id
+    // (поднимает парящие плиты, сжигает сгустки Мглы). Коснулась ещё раз — время снова полное.
+    hearth(c, r, id, o={}){ out.switches.push(Object.assign({kind:'hearth', x:c*T + 16, y:r*T, id, dur:6, left:0, t:0, lit:false}, o)); },
+    // резонансный колокол без языка: низ колокола в ряду r. Прыгни в него — гул на dur секунд:
+    // тени и пепельники вокруг замирают, сгустки Мглы с тем же id расходятся
+    resonator(c, r, id='', o={}){ out.switches.push(Object.assign({kind:'bell', x:c*T + 16, y:r*T, id, dur:8, left:0, t:0, cd:0, swing:0, reach:14*T}, o)); },
+    // плита у механизма Джей: встала на неё — Джей зажимает педаль; сошла — держит ещё dur секунд
+    pedal(c, r, id, o={}){ out.switches.push(Object.assign({kind:'pedal', x:c*T + 16, y:r*T, id, dur:5, left:0, t:0, w:2, jay:'jay'}, o)); },
+    // парящая плита: стоит в (c, r), пока есть сигнал id; без него уходит на drop клеток вниз, в Мглу
+    heat(c, r, len, id, o={}){ const d = (o.drop || 7)*T; out.movers.push({x0:c*T, y0:r*T, x:c*T, y:r*T + d, w:len*T, h:14, dx:0, dy:0, t:0, period:1, heat:id, k:0, dist:d}); },
+    // эхо Мглы: призрачная плита. Твёрдая on секунд, потом тает и пропадает на off секунд. phase — сдвиг (сек)
+    echo(c, r, len, o={}){ out.movers.push({x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:o.phase || 0, period:1, echo:true, on:o.on || 3, off:o.off || 2, a:1}); },
+    // сгусток Мглы: стена тумана в колонках c…c+1. Расходится, пока есть сигнал id (очаг, колокол)
+    clot(c, r0, r1, id, o={}){ h.gate(c, r0, r1, id, Object.assign({look:'mist', w:2}, o)); }
   });
 }
 function parseMech(W, out){
@@ -54,6 +70,7 @@ function parseMech(W, out){
   for (const f of W.finds){ const info = (out.findInfo || {})[Math.floor((f.x - 16)/T) + ',' + Math.round(f.y/T - 1)]; if (info){ f.name = info.name; f.icon = info.icon; } }
   W.bellT = 2;
   W.gates = out.gates || []; W.keylocks = out.keylocks || []; W.waters = out.waters || []; W.forced = {};
+  W.switches = out.switches || []; W.timed = {};
 }
 
 // ---------- Звук: колокол с панорамой, сердцебиение, капли, рычаг, тревога ----------
@@ -79,7 +96,11 @@ Object.assign(sfx, {
   latch(){ tone(520, .08, 'square', .03, 300); tone(260, .12, 'triangle', .03, null, .06); },
   splash(){ noise(.5, .06, 900, .5); tone(300, .2, 'sine', .02, 120); },
   turn(){ tone(70 + Math.random()*20, .12, 'sawtooth', .012, 60); },
-  stone(){ noise(1.8, .07, 240, .4, 0, 'lowpass'); tone(46, 1.4, 'sawtooth', .05, 34); tone(68, 1, 'square', .015, 40, .3); }
+  stone(){ noise(1.8, .07, 240, .4, 0, 'lowpass'); tone(46, 1.4, 'sawtooth', .05, 34); tone(68, 1, 'square', .015, 40, .3); },
+  ignite(){ noise(.5, .06, 1200, .5); tone(180, .4, 'triangle', .03, 360); tone(540, .3, 'sine', .02, 900, .05); },
+  ember(){ tone(900 + Math.random()*300, .05, 'triangle', .012, 600); },
+  resonate(){ bellSound(0, 1); tone(98, 2.6, 'sine', .06, 92); tone(147, 2.2, 'sine', .025, 140, .05); },
+  echo(){ tone(1200, .5, 'sine', .01, 1600); tone(800, .6, 'sine', .008, 1100, .1); }
 });
 
 // ---------- Обновление ----------
@@ -119,8 +140,10 @@ function updateMech(dt, frozen){
     if (p.y + p.h > R.y + 18 && p.inv <= 0){ fallOut(); R.y = Math.max(R.y, p.checkpoint.y + p.h + R.gap); } }
 }
 // ---------- Глава 6: противовесы, замки, решётки, вода ----------
+const vis = (x, m=120) => x > S.cam.x - m && x < S.cam.x + VW + m;
 function updateCh6(dt, frozen){
   const W = S.W, p = S.P; if (!W.gates) return;
+  updateCh7(dt, frozen);
   const sig = W.forced;
   for (const kl of W.keylocks){ // Медный ключ: держать «вниз» у розетки
     kl.near = !kl.done && p.onGround && Math.abs(p.x + p.w/2 - kl.x) < 44 && Math.abs(p.y + p.h - kl.y) < 12 && (!kl.when || kl.when());
@@ -132,11 +155,11 @@ function updateCh6(dt, frozen){
     else kl.t = Math.max(0, kl.t - dt*1.5);
   }
   for (const g of W.gates){
-    const want = g.invert ? !sig[g.id] : !!sig[g.id];
+    const on = !!sig[g.id] || W.timed[g.id] > 0, want = g.invert ? !on : on;
     const box = {x:g.c*T, y:g.r0*T, w:g.w*T, h:(g.r1 - g.r0 + 1)*T};
     if (want && !g.open){ g.open = true; for (let i=0;i<g.w;i++) for (let r=g.r0;r<=g.r1;r++) W.grid[r][g.c + i] = ' '; g.look === 'stone' ? sfx.stone() : sfx.gate(); }
-    else if (!want && g.open && !overlap(p, box)){ g.open = false; for (let i=0;i<g.w;i++) for (let r=g.r0;r<=g.r1;r++) W.grid[r][g.c + i] = 'g'; sfx.grate(); S.shake = .35; camKick(5); }
-    g.k = approach(g.k, g.open ? 1 : 0, dt*(g.open ? (g.look === 'stone' ? .6 : 1.6) : 7));
+    else if (!want && g.open && !overlap(p, box)){ g.open = false; for (let i=0;i<g.w;i++) for (let r=g.r0;r<=g.r1;r++) W.grid[r][g.c + i] = 'g'; if (g.look === 'mist'){ if (vis(g.c*T)) sfx.echo(); } else { sfx.grate(); S.shake = .35; camKick(5); } }
+    g.k = approach(g.k, g.open ? 1 : 0, dt*(g.open ? (g.look === 'stone' ? .6 : g.look === 'mist' ? 2.5 : 1.6) : g.look === 'mist' ? 3 : 7));
   }
   if (frozen) return;
   for (const w of W.waters){ w.t += dt; // упала в воду — назад к фонарю
@@ -195,7 +218,7 @@ function startRise(o={}){ const p = S.P; S.rise = {y:o.y ?? p.y + p.h + (o.gap |
 
 // ---------- Отрисовка ----------
 function drawMech(){
-  const W = S.W; if (!W.levers) return; drawCh6();
+  const W = S.W; if (!W.levers) return; drawCh6(); drawCh7();
   for (const lv of W.levers){ if (lv.x < S.cam.x - 60 || lv.x > S.cam.x + VW + 60) continue;
     ctx.save(); ctx.translate(lv.x, lv.y);
     pathRR(ctx, -14, -10, 28, 10, 3); fillInk(ctx, '#4A3E36', 1.6);
@@ -218,13 +241,14 @@ function drawMech(){
   }
 }
 function drawCh6(){
-  const W = S.W; if (!W.gates) return; const vis = (x, m=120) => x > S.cam.x - m && x < S.cam.x + VW + m;
+  const W = S.W; if (!W.gates) return;
   for (const w of W.waters){ const x0 = Math.max(w.x, S.cam.x - 20), x1 = Math.min(w.x + w.w, S.cam.x + VW + 20); if (x1 <= x0) continue; // вода — только видимая часть
     ctx.fillStyle = 'rgba(28,52,70,.94)'; ctx.fillRect(x0, w.y, x1 - x0, 120); ctx.fillStyle = 'rgba(70,120,140,.6)'; ctx.fillRect(x0, w.y, x1 - x0, 14);
     ctx.strokeStyle = 'rgba(190,230,240,.55)'; ctx.lineWidth = 2; ctx.beginPath();
     for (let x = x0; x <= x1; x += 16) ctx.lineTo(x, w.y + Math.sin(x*.05 + w.t*2)*2.2); ctx.stroke(); }
   for (const g of W.gates){ const x = g.c*T, y0 = g.r0*T, wd = g.w*T, hgt = (g.r1 - g.r0 + 1)*T; if (!vis(x)) continue;
     ctx.save(); ctx.beginPath(); ctx.rect(x - 8, y0 - 6, wd + 16, hgt + 10); ctx.clip();
+    if (g.look === 'mist'){ ctx.restore(); drawClot(g, x, y0, wd, hgt); continue; }
     if (g.look === 'stone'){ const sx = g.k*(wd/2 + 8); // створки разъезжаются в стороны
       for (const [side, ox] of [[-1, x], [1, x + wd/2]]){ const bx = ox + side*sx; ctx.fillStyle = '#3A3F4E'; ctx.fillRect(bx, y0, wd/2, hgt); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(bx, y0, wd/2, hgt);
         ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let yy = y0 + 20; yy < y0 + hgt; yy += 26) ctx.fillRect(bx, yy, wd/2, 3); }
@@ -357,3 +381,135 @@ const DECO_EXTRA = {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 54, 70, 'rgba(120,210,230,A)', .18 + .06*Math.sin(S.time*1.3)); ctx.restore(); },
   rail(dc){ const x = dc.x, y = dc.y, w = (dc.w || 6)*T; ctx.fillStyle = '#5A4434'; ctx.fillRect(x, y - 34, w, 6); for (let xx = x; xx <= x + w; xx += 22) ctx.fillRect(xx, y - 34, 5, 34); }
 };
+
+// ---------- Глава 7: очаги, колокола, плита Джей, парящие плиты, эхо Мглы ----------
+function updateCh7(dt, frozen){
+  const W = S.W, p = S.P; if (!W.switches) return;
+  const tm = W.timed; for (const id in tm) tm[id] = 0;
+  const px = p.x + p.w/2, feet = p.y + p.h;
+  for (const s of W.switches){ s.t += dt;
+    if (!frozen && s.left > 0){ const was = s.left; s.left = Math.max(0, s.left - dt);
+      if (s.kind === 'hearth' && Math.floor(was) !== Math.floor(s.left) && s.left < 3 && s.left > 0 && vis(s.x)) sfx.ember(); // догорает — потрескивает
+      if (s.left === 0 && s.kind === 'pedal'){ const j = npc(s.jay); if (j && !j.hidden){ j.say = 'Всё, не держу!'; j.sayT = 1.6; } sfx.lever(); } }
+    if (s.kind === 'bell'){ s.cd = Math.max(0, s.cd - dt); s.swing *= Math.exp(-dt*1.6); }
+    if (!frozen && S.mode === 'play'){
+      if (s.kind === 'hearth' && Math.abs(px - s.x) < 34 && feet > s.y - 40 && feet < s.y + 6 && s.left < s.dur - .4){ // коснулась — очаг вспыхивает (стоишь рядом — горит дальше)
+        const first = !s.lit, loud = s.left < 3; s.lit = true; s.left = s.dur; if (loud){ sfx.ignite(); embers(s.x, s.y - 20, 14); buzz(20); }
+        if (loud) for (let i=0;i<8;i++) S.particles.push({x:S.V.x, y:S.V.y, vx:(s.x - S.V.x)*2.4 + rnd(-30,30), vy:(s.y - 20 - S.V.y)*2.4 + rnd(-30,30), life:.4, t:0, c:'rgba(255,200,120,.9)', s:2.4, g:0, kind:'dot'}); // Искра подкидывает огонька
+        if (first) floatText(s.x, s.y - 70, 'Очаг вспыхнул!', '#FFE3A8'); }
+      if (s.kind === 'bell' && s.cd <= 0 && overlap(p, {x:s.x - 20, y:s.y - 52, w:40, h:52})){ // прыгнула в колокол — гул
+        s.cd = 1; s.left = s.dur; s.swing = 1; sfx.resonate(); S.shake = Math.max(S.shake, .2); buzz(30); if (p.vy < 0) p.vy = 60;
+        for (const k of W.kl) if (Math.hypot(k.x - s.x, k.y - s.y) < s.reach) k.stun = s.dur;
+        for (const m of W.moths) if (Math.hypot(m.x - s.x, m.y - s.y) < s.reach) m.stun = s.dur;
+        floatText(s.x, s.y - 80, 'Гул!', '#CFE2FF'); }
+      if (s.kind === 'pedal' && p.onGround && Math.abs(px - s.x - (s.w - 1)*T/2) < s.w*T/2 + 4 && Math.abs(feet - s.y) < 6){ // Ая на плите — Джей держит
+        if (s.left === 0){ sfx.lever(); const j = npc(s.jay); if (j && !j.hidden){ j.say = pick(['Держу! Беги, верхняя!', 'Давай-давай-давай!', 'Пошла!']); j.sayT = 1.6; } }
+        s.left = s.dur; }
+    }
+    if (s.left > 0 && s.id) tm[s.id] = Math.max(tm[s.id] || 0, s.left);
+  }
+}
+// парящие плиты и эхо (вызывается из цикла платформ движка)
+function moveCh7(m, dt){
+  if (m.echo){ m.t += dt; const cyc = m.on + m.off, ph = ((m.t % cyc) + cyc) % cyc, was = m.off;
+    m.off = ph >= m.on; m.dx = 0; m.dy = 0;
+    m.a = m.off ? 0 : ph < .25 ? ph/.25 : ph > m.on - .7 ? (Math.floor(ph*12) % 2 ? .35 : .8) : 1; // перед исчезновением мигает
+    if (was && !m.off && vis(m.x, 0)) sfx.echo();
+    return; }
+  const W = S.W, on = (W.timed[m.heat] || 0) > 0 || !!W.forced[m.heat], was = m.k;
+  m.k = approach(m.k, on ? 1 : 0, dt/(on ? .7 : 1.4));
+  const e = m.k < .5 ? 2*m.k*m.k : 1 - Math.pow(-2*m.k + 2, 2)/2, ny = m.y0 + (1 - e)*m.dist;
+  m.dy = ny - m.y; m.dx = 0; m.y = ny; m.off = m.k < .2; // опущенная плита не держит
+  m.warn = on && (W.timed[m.heat] || 0) < 1.6 && !W.forced[m.heat]; // скоро опустится — мигает
+  if (was < 1 && m.k >= 1 && vis(m.x, 0)) sfx.land(.25);
+}
+function drawCh7Mover(m){
+  const x = m.x, y = m.y, w = m.w;
+  if (m.echo){ // призрак старого мостика: голубая кладка, мерцание
+    ctx.save();
+    if (m.off){ ctx.globalAlpha = .18; ctx.setLineDash([5, 7]); ctx.strokeStyle = '#BFE6F2'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, 12); ctx.restore(); return; }
+    ctx.globalAlpha = .25 + .6*m.a; ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(120,200,230,.55)'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = 'rgba(210,245,255,.8)'; ctx.fillRect(x, y, w, 3);
+    ctx.fillStyle = 'rgba(90,160,200,.5)'; for (let xx = x + 10; xx < x + w - 4; xx += 22) ctx.fillRect(xx, y + 4, 2, 8);
+    ctx.globalAlpha = .12*m.a; for (let i=0;i<3;i++) ctx.fillRect(x + 6 + i*(w/3), y + 12, 4, 30 + i*8); // «опоры», уходящие в туман
+    ctx.restore(); return; }
+  // парящая плита: старый камень с тёплыми трещинами
+  if (y > S.cam.y + VH + 40) return;
+  ctx.fillStyle = INK; ctx.fillRect(x - 1, y - 1, w + 2, 18); ctx.fillStyle = '#4E5866'; ctx.fillRect(x + 1, y + 1, w - 2, 14); ctx.fillStyle = '#66717F'; ctx.fillRect(x + 2, y + 1, w - 4, 3);
+  const hot = m.k*(m.warn ? (Math.floor(S.time*8) % 2 ? .3 : 1) : 1);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,170,90,${.15 + .7*hot})`; ctx.lineWidth = 2; ctx.beginPath();
+  for (let xx = x + 10, i = 0; xx < x + w - 10; xx += 30, i++){ const s = i % 2 ? 1 : -1; ctx.moveTo(xx, y + 3); ctx.lineTo(xx + 4*s, y + 8); ctx.lineTo(xx + 1, y + 14); ctx.moveTo(xx + 4*s, y + 8); ctx.lineTo(xx + 10*s, y + 10); } ctx.stroke();
+  if (hot > .1) glow(x + w/2, y + 8, w*.6, 'rgba(255,160,80,A)', .18*hot); ctx.restore();
+}
+function drawClot(g, x, y0, wd, hgt){ // сгусток Мглы: клубится, пока не разошёлся
+  const a = 1 - g.k; if (a <= .02) return;
+  ctx.save(); ctx.globalAlpha = a;
+  for (let i=0;i<9;i++){ const yy = y0 + (i + .5)*hgt/9, xx = x + wd/2 + Math.sin(S.time*1.3 + i*1.7)*10;
+    ctx.fillStyle = i % 2 ? 'rgba(70,90,130,.85)' : 'rgba(110,130,170,.8)'; ctx.beginPath(); ctx.ellipse(xx, yy, wd*.75 + Math.sin(S.time + i)*6, hgt/9 + 10, 0, 0, Math.PI*2); ctx.fill(); }
+  ctx.fillStyle = 'rgba(210,230,255,.7)'; for (let i=0;i<4;i++){ const yy = y0 + ((S.time*20 + i*37) % hgt); ctx.fillRect(x + wd/2 + Math.sin(i*3 + S.time)*12, yy, 2, 2); }
+  ctx.restore();
+}
+function drawCh7(){
+  const W = S.W; if (!W.switches) return;
+  for (const s of W.switches){ if (!vis(s.x)) continue; const x = s.x, y = s.y, k = s.left/s.dur;
+    if (s.kind === 'hearth'){ // каменная чаша, мох, угли; горит — пламя и кольцо-таймер
+      ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.lineTo(x - 26, y - 18); ctx.lineTo(x + 26, y - 18); ctx.lineTo(x + 30, y); ctx.closePath(); fillInk(ctx, '#55606A', 2.2);
+      ctx.beginPath(); ctx.ellipse(x, y - 18, 26, 6, 0, 0, Math.PI*2); fillInk(ctx, '#2A2E34', 2); ctx.fillStyle = '#4E8A84'; for (const dx of [-22, -12, 14, 22]) ctx.fillRect(x + dx - 3, y - 6, 6, 3); // синий мох
+      ctx.fillStyle = s.left > 0 ? '#FF9A4A' : '#5A4440'; for (const dx of [-12, -4, 5, 13]){ ctx.beginPath(); ctx.arc(x + dx, y - 19, 3.4, 0, Math.PI*2); ctx.fill(); }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      if (s.left > 0){ glow(x, y - 30, 90, 'rgba(255,170,90,A)', .3 + .25*k);
+        for (let i=0;i<3;i++){ const fh = (18 + 10*Math.sin(S.time*9 + i*2))*(.5 + .5*k); ctx.fillStyle = i === 1 ? 'rgba(255,230,160,.85)' : 'rgba(255,140,70,.7)';
+          ctx.beginPath(); ctx.moveTo(x - 18 + i*12, y - 19); ctx.quadraticCurveTo(x - 12 + i*12, y - 19 - fh*1.4, x - 6 + i*12, y - 19); ctx.fill(); } }
+      else glow(x, y - 20, 40, 'rgba(120,210,230,A)', .1 + .06*Math.sin(S.time*2)); // спит: еле теплится синим
+      ctx.restore();
+      if (s.left > 0){ ctx.strokeStyle = 'rgba(255,227,168,.25)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y - 56, 14, 0, Math.PI*2); ctx.stroke();
+        ctx.strokeStyle = k < .3 ? '#FF8A5A' : '#FFE3A8'; ctx.beginPath(); ctx.arc(x, y - 56, 14, -Math.PI/2, -Math.PI/2 + Math.PI*2*k); ctx.stroke(); } }
+    else if (s.kind === 'bell'){ // бронзовый колокол без языка, бирюзовый налёт; качается от удара
+      ctx.strokeStyle = '#2A2A30'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 52); ctx.lineTo(x, y - 52 - 5*T); ctx.stroke();
+      ctx.save(); ctx.translate(x, y - 52); ctx.rotate(Math.sin(s.t*7)*.35*s.swing);
+      ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(-12, 4, -14, 26); ctx.quadraticCurveTo(-22, 46, -26, 50); ctx.lineTo(26, 50); ctx.quadraticCurveTo(22, 46, 14, 26); ctx.quadraticCurveTo(12, 4, 8, 0); ctx.closePath(); fillInk(ctx, '#8A6A3A', 2.4);
+      ctx.fillStyle = 'rgba(80,190,170,.55)'; ctx.fillRect(-16, 30, 10, 6); ctx.fillRect(6, 18, 7, 9); ctx.fillRect(-4, 40, 14, 5); // патина
+      ctx.fillStyle = '#5A4424'; ctx.fillRect(-24, 46, 48, 4);
+      ctx.restore();
+      if (s.left > 0){ const tt = s.dur - s.left; for (let i=0;i<3;i++){ const q = ((tt*.7 + i/3) % 1); ctx.strokeStyle = `rgba(180,215,255,${.5*(1 - q)*Math.min(1, s.left)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 30, 20 + q*s.reach*.5, 0, Math.PI*2); ctx.stroke(); } }
+      else if (s.cd <= 0){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 26, 40, 'rgba(160,220,255,A)', .1 + .07*Math.sin(S.time*3)); ctx.restore(); } }
+    else if (s.kind === 'pedal'){ const w = s.w*T, bx = x - 16; // каменная плита с медным ободом
+      ctx.fillStyle = INK; ctx.fillRect(bx - 1, y - 7, w + 2, 8); ctx.fillStyle = s.left > 0 ? '#C9A15A' : '#8A6A3A'; ctx.fillRect(bx + 1, y - 6, w - 2, 6);
+      if (s.left > 0){ ctx.fillStyle = '#FFE3A8'; ctx.fillRect(bx + 1, y - 10, (w - 2)*k, 3); }
+      else { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(bx + w/2, y - 6, 34, 'rgba(255,210,140,A)', .15 + .1*Math.sin(S.time*4)); ctx.restore(); } }
+  }
+}
+// ---------- Декорации главы 7 ----------
+Object.assign(DECO_EXTRA, {
+  vhouse(dc){ const x = dc.x, y = dc.y, w = (dc.w || 6)*T, h = (dc.h || 5)*T; // затонувший дом Долины: тёмные арочные окна, кое-где тёплый огонёк
+    if (x > S.cam.x + VW + 40 || x + w < S.cam.x - 40) return;
+    ctx.fillStyle = '#2A3440'; ctx.fillRect(x, y - h, w, h); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x, y - h, w, h);
+    for (let yy = y - h + 18; yy < y - 30; yy += 46) for (let xx = x + 14; xx < x + w - 24; xx += 40){ const lit = hash(xx|0, yy|0, 5) % 7 === 0;
+      ctx.fillStyle = lit ? '#E89A4A' : '#141A22'; ctx.beginPath(); ctx.moveTo(xx, yy + 24); ctx.lineTo(xx, yy + 8); ctx.arc(xx + 9, yy + 8, 9, Math.PI, 0); ctx.lineTo(xx + 18, yy + 24); ctx.closePath(); ctx.fill();
+      if (lit){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(xx + 9, yy + 14, 30, 'rgba(255,170,90,A)', .25); ctx.restore(); } }
+    ctx.fillStyle = 'rgba(80,140,130,.35)'; for (let i=0;i<4;i++) ctx.fillRect(x + (hash(i, x|0, 2) % (w - 10)), y - h, 6, 20 + i*10); },
+  statue(dc){ const x = dc.x, y = dc.y, h = (dc.h || 6)*T; // основатель Долины с чашей огня в руках
+    ctx.fillStyle = '#3A4450'; ctx.fillRect(x - 30, y - 24, 60, 24); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x - 30, y - 24, 60, 24);
+    ctx.beginPath(); ctx.moveTo(x - 18, y - 24); ctx.lineTo(x - 22, y - h + 50); ctx.quadraticCurveTo(x, y - h + 30, x + 22, y - h + 50); ctx.lineTo(x + 18, y - 24); ctx.closePath(); fillInk(ctx, '#4E5866', 2);
+    ctx.beginPath(); ctx.arc(x, y - h + 30, 14, 0, Math.PI*2); fillInk(ctx, '#4E5866', 2);
+    ctx.beginPath(); ctx.ellipse(x, y - h + 64, 18, 6, 0, 0, Math.PI*2); fillInk(ctx, '#3A4450', 2);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - h + 58, 40, 'rgba(120,210,230,A)', .15 + .05*Math.sin(S.time*1.5 + x)); ctx.restore(); },
+  kiln(dc){ const x = dc.x, y = dc.y; // печь стеклодувов
+    ctx.beginPath(); ctx.moveTo(x - 50, y); ctx.lineTo(x - 44, y - 90); ctx.quadraticCurveTo(x, y - 130, x + 44, y - 90); ctx.lineTo(x + 50, y); ctx.closePath(); fillInk(ctx, '#5A4840', 2.4);
+    ctx.beginPath(); ctx.arc(x, y - 40, 18, Math.PI, 0); ctx.lineTo(x + 18, y - 10); ctx.lineTo(x - 18, y - 10); ctx.closePath(); ctx.fillStyle = '#2A1A14'; ctx.fill();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 30, 40, 'rgba(255,150,80,A)', .2 + .06*Math.sin(S.time*2 + x)); ctx.restore();
+    ctx.fillStyle = 'rgba(160,220,240,.5)'; for (let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(x - 30 + i*30, y - 100 - (i%2)*6, 5, 0, Math.PI*2); ctx.fill(); } }, // стеклянные шары на полке
+  winch(dc){ const x = dc.x, y = dc.y; // торговая лебёдка: барабан и канат, уходящий вверх в туман
+    ctx.strokeStyle = '#B8A07A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 40); ctx.lineTo(x, y - 40 - 14*T); ctx.stroke();
+    ctx.fillStyle = '#3A2E26'; ctx.fillRect(x - 26, y - 50, 8, 50); ctx.fillRect(x + 18, y - 50, 8, 50);
+    ctx.beginPath(); ctx.arc(x, y - 40, 16, 0, Math.PI*2); fillInk(ctx, '#6A5040', 2); ctx.beginPath(); ctx.arc(x, y - 40, 5, 0, Math.PI*2); fillInk(ctx, '#C9A15A', 1.4); },
+  heartgate(dc){ const x = dc.x, y = dc.y; // ворота Сердца Долины: решётка, за ней бьётся чистый свет
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 160, 260 + 20*Math.sin(S.time*2.4), 'rgba(255,220,150,A)', .3); glow(x, y - 160, 120, 'rgba(160,230,255,A)', .35 + .1*Math.sin(S.time*3)); ctx.restore();
+    ctx.fillStyle = '#232830'; ctx.beginPath(); ctx.moveTo(x - 150, y); ctx.lineTo(x - 150, y - 230); ctx.arc(x, y - 230, 150, Math.PI, 0); ctx.lineTo(x + 150, y); ctx.lineTo(x + 110, y); ctx.lineTo(x + 110, y - 230); ctx.arc(x, y - 230, 110, 0, Math.PI, true); ctx.lineTo(x - 110, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = '#3E4652'; for (let i=-4;i<=4;i++) ctx.fillRect(x + i*24 - 3, y - 330 + Math.abs(i)*12, 6, 330 - Math.abs(i)*12);
+    for (const yy of [y - 90, y - 190]) ctx.fillRect(x - 108, yy, 216, 7);
+    ctx.save(); ctx.translate(x, y - 405); ctx.scale(1.3, 1.3); lampSign(ctx, 0, 0); ctx.restore(); },
+  shard(dc){ const x = dc.x, y = dc.y; // светящиеся кристаллы у дороги
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 14, 34, 'rgba(140,220,240,A)', .25 + .1*Math.sin(S.time*2 + x)); ctx.restore();
+    for (const [dx, hh, a] of [[-8, 22, -.3], [0, 32, 0], [9, 18, .35]]){ ctx.save(); ctx.translate(x + dx, y); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(0, -hh); ctx.lineTo(5, 0); ctx.closePath(); fillInk(ctx, 'rgba(150,220,240,.85)', 1.6); ctx.restore(); } }
+});

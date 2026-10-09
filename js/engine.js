@@ -187,7 +187,8 @@ function updatePlayer(dt){
     if (w.ether){ // эфирный поток Первого Огня (глава 6)
       if (isDown() && !p.onGround) p.etherOut = .45; if (p.etherOut > 0) continue;
       p.inWind = true; p.doubled = false; p.mover = null; p.jumping = false;
-      p.vy = approach(p.vy, -(isJump() ? 360 : 256), (p.vy > 0 ? 6500 : 2400)*dt); // падающую — подхватывает сразу if (w.dx) p.vx = approach(p.vx, w.dx*300 + dir*60, 1600*dt);
+      p.vy = approach(p.vy, -(isJump() ? 360 : 256), (p.vy > 0 ? 6500 : 2400)*dt); // падающую — подхватывает сразу
+      if (w.dx) p.vx = approach(p.vx, w.dx*300 + dir*60, 1600*dt);
       if (Math.random() < .35) S.particles.push({x:p.x + rnd(-8, 32), y:p.y + p.h, vx:w.dx*120 + rnd(-10,10), vy:-rnd(160,260), life:.6, t:0, c:pick(['rgba(150,220,240,.85)','rgba(255,214,140,.85)']), s:2.2, g:0, kind:'dot'});
       break; }
     p.inWind = true; p.vy = Math.max(-600, p.vy - 4200*dt); p.doubled = false; p.mover = null;
@@ -195,13 +196,14 @@ function updatePlayer(dt){
   if (!p.inWind){ p.vy += G * dt * (p.vy > 0 ? FALL_MULT : 1); p.vy = Math.min(p.vy, MAX_FALL); }
   if (isDown() && p.onGround) p.drop = .2; else p.drop = Math.max(0, p.drop - dt);
   // едем на движущейся платформе
+  if (p.mover && p.mover.off) p.mover = null; // эхо Мглы растаяло под ногами
   if (p.mover){ p.x += p.mover.dx; p.y = p.mover.y - p.h; if (p.vy > 0) p.vy = 0; }
   const was = p.onGround, fallV = p.vy;
   const prevBottom = moveEntity(p, dt, p.drop <= 0, true);
   // приземление на движущуюся платформу (сквозная снизу)
   if (p.mover && (p.drop > 0 || p.x + p.w < p.mover.x || p.x > p.mover.x + p.mover.w)) p.mover = null;
   if (!p.onGround && p.vy >= 0 && p.drop <= 0){
-    for (const m of S.W.movers){
+    for (const m of S.W.movers){ if (m.off) continue;
       if (p.x + p.w > m.x + 2 && p.x < m.x + m.w - 2 && prevBottom <= m.y + 8 + Math.max(0, m.dy) && p.y + p.h >= m.y - 1){
         p.y = m.y - p.h; p.vy = 0; p.onGround = true; p.mover = m; break; }
     }
@@ -270,30 +272,32 @@ function updateWorld(dt, interact){
   for (const m of W.movers){
     if (m.lever !== undefined){ moveShelf(m, dt); continue; }
     if (m.cw || m.cwB){ moveCw(m, dt); continue; }
+    if (m.heat !== undefined || m.echo){ moveCh7(m, dt); continue; }
     m.t += dt; const k = (1 - Math.cos(m.t/m.period*Math.PI*2))/2, nx = lerp(m.x0, m.x1, k), ny = lerp(m.y0, m.y1, k);
     m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny;
   }
   for (const k of W.kl){
     k.t += dt;
     if (k.dead){ k.dead += dt; continue; }
-    if (S.mode === 'dialog'){ k.vx = 0; k.vy += G*dt; moveEntity(k, dt, true, false); continue; } // во время разговора тени и жуки стоят на месте
-    k.vx = k.dir*k.speed; k.vy += G*dt; moveEntity(k, dt, true, false);
+    if (k.stun > 0) k.stun -= dt; const stunned = k.stun > 0; // колокол оглушил — стоит и не кусается
+    if (S.mode === 'dialog' || stunned){ k.vx = 0; k.vy += G*dt; moveEntity(k, dt, true, false); if (S.mode === 'dialog') continue; } // во время разговора тени и жуки стоят на месте
+    else { k.vx = k.dir*k.speed; k.vy += G*dt; moveEntity(k, dt, true, false); }
     if (k.hitWall) k.dir *= -1;
-    if (k.onGround){ const ax = k.dir > 0 ? k.x + k.w + 2 : k.x - 2, ac = Math.floor(ax/T), b = tileAt(ac, Math.floor((k.y+k.h+4)/T)), fr = tileAt(ac, Math.floor((k.y+k.h-4)/T));
+    if (k.onGround && !stunned){ const ax = k.dir > 0 ? k.x + k.w + 2 : k.x - 2, ac = Math.floor(ax/T), b = tileAt(ac, Math.floor((k.y+k.h+4)/T)), fr = tileAt(ac, Math.floor((k.y+k.h-4)/T));
       if ((!SOLID.has(b) && b !== '=') || fr === '^') k.dir *= -1; }
     if (interact && overlap(p, k)){
       if (p.vy > 40 && (p.y + p.h) - k.y < 18){ k.dead = .001; stompBounce(p); embers(k.x + 13, k.y + 10, 10);
         burst(k.x + 13, k.y + 14, 12, ['#3A3050','#5A4E78','#8A7EA8'], {g:300, min:80, max:220}); floatText(k.x + 13, k.y - 10, curCh().theme === 'clock' ? 'Механизм поломан!' : 'Тень рассеялась!', '#FFE3A8'); }
-      else hurt(k.x + k.w/2);
+      else if (!stunned) hurt(k.x + k.w/2);
     }
   }
   W.kl = W.kl.filter(k => !k.dead || k.dead < .5);
   for (const m of W.moths){
-    if (m.dead){ m.dead += dt; continue; } if (S.mode !== 'dialog') m.t += dt;
+    if (m.dead){ m.dead += dt; continue; } if (m.stun > 0) m.stun -= dt; if (S.mode !== 'dialog' && !(m.stun > 0)) m.t += dt;
     m.x = m.x0 + Math.sin(m.t*1.1)*90; m.y = m.y0 + Math.sin(m.t*2.2)*44;
     if (interact && overlap(p, m)){
       if (p.vy > 40 && (p.y + p.h) - m.y < 16){ m.dead = .001; stompBounce(p); embers(m.x + 13, m.y + 10, 8); }
-      else hurt(m.x + m.w/2);
+      else if (!(m.stun > 0)) hurt(m.x + m.w/2);
     }
   }
   W.moths = W.moths.filter(m => !m.dead || m.dead < .3);
@@ -352,7 +356,7 @@ function npcMove(n, dx){
   }
   // Дальше дороги нет: уходящий персонаж тихо растворяется, а идущий к цели — появляется уже на месте
   if (n.state === 'leave') n.hidden = true;
-  else if (n.state === 'walk'){ n.x = n.tx; n.y = npcGround(n.tx, n.y) ?? n.y; n.alpha = 0; n.state = 'idle';
+  else if (n.state === 'walk'){ const gy = npcGround(n.tx, n.y); if (gy !== null){ n.x = n.tx; n.y = gy; n.alpha = 0; } n.state = 'idle'; // под целью пусто — остаёмся, где стоим
     if (n.onArrive){ const f = n.onArrive; n.onArrive = null; f(); } }
 }
 function npcHop(n, dt){
@@ -446,8 +450,8 @@ let journalOpen = false;
 
 /* ================= Сцены (визуальная новелла) =================
    Сцена: {title, lines:[{n:'Ая', t:'…', e:'happy', act(){…}}], left:'aya', right:'timofey', slides:true, end(){…}} */
-const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Странник':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta','Эра':'era','Эрмина':'era'};
-const NAMECOL = {aya:'#B9572A', timofey:'#7A5A3A', miko:'#7A3E9A', gisa:'#B9801A', axel:'#3E6E70', vran:'#7E2E3C', cherry:'#9A2F31', julia:'#2F7F66', marta:'#4E6E40', era:'#5A6A9A'};
+const WHO = {'Ая':'aya','Тимофей':'timofey','Дед':'timofey','Мико':'miko','Гиса':'gisa','Странник':'axel','Незнакомец':'axel','Вран':'vran','Черри':'cherry','Жуля':'julia','Марта':'marta','Эра':'era','Эрмина':'era','Джей':'jay'};
+const NAMECOL = {aya:'#B9572A', timofey:'#7A5A3A', miko:'#7A3E9A', gisa:'#B9801A', axel:'#3E6E70', vran:'#7E2E3C', cherry:'#9A2F31', julia:'#2F7F66', marta:'#4E6E40', era:'#5A6A9A', jay:'#2E8A86'};
 function startScene(name, def0){
   const ch = curCh(), def = def0 || ch.scenes[name]; if (!def){ console.warn('нет сцены', name); return; }
   const lines = def.lines, hero = def.left === undefined ? 'aya' : def.left;
