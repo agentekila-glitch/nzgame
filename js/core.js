@@ -3,7 +3,7 @@
    Город гаснущих фонарей — ядро: утилиты, настройки, ввод, звук.
    Все файлы игры — обычные <script>, общие переменные видны между ними.
    ===================================================================== */
-const VERSION = 'Бета 0.7.0';
+const VERSION = 'Бета 0.7.1';
 const $ = id => document.getElementById(id);
 const T = 32; let VW = 960, VH = 540;     // VW/VH подстраиваются под экран телефона в fitStage()
 let HUD = {t:0, r:0, b:0, l:0};          // отступы HUD от кнопок Telegram/выреза, в единицах кадра
@@ -20,6 +20,10 @@ const HITSTOP_STOMP = .065, HITSTOP_HURT = .11, HITSTOP_PICK = .04;
 
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let storeHook = null;
+let errShown = 0; // показываем ошибку игроку коротко, чтобы он мог прислать её автору
+function reportError(e){ const msg = (e && (e.message || e.reason && e.reason.message)) || String(e); console.error(e); if (errShown++ < 2 && typeof toast === 'function') toast('Ошибка: ' + msg.slice(0, 90)); }
+addEventListener('error', e => reportError(e.error || e.message));
+addEventListener('unhandledrejection', e => reportError(e.reason));
 const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} if (storeHook) storeHook(k, v); } };
 const rnd = (a,b) => a + Math.random()*(b-a);
 const pick = a => a[Math.floor(Math.random()*a.length)];

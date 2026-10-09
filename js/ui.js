@@ -17,7 +17,9 @@ const fmtTime = s => { s = Math.floor(s); return `${Math.floor(s/60)}:${String(s
 /* ================= Главное меню ================= */
 function showMenu(){
   const prog = readProgress(), d = readSave();
-  S = newState(clamp(d ? d.ch : prog.unlocked, 0, CHAPTERS.length - 1)); G1.S = S; LAYERS = null; G1.paused = false; $('dlg').classList.remove('on');
+  try { S = newState(clamp(d ? d.ch : prog.unlocked, 0, CHAPTERS.length - 1)); } // мир главы нужен меню только как запасной фон
+  catch(e){ reportError(e); S = newState(0); }
+  G1.S = S; LAYERS = null; G1.paused = false; $('dlg').classList.remove('on');
   journalOpen = false; $('journal').hidden = true;
   showScreen('title');
   $('mContinue').hidden = !d;
@@ -308,7 +310,14 @@ async function cloudMerge(){
   const cj = parse(jour), lj = parse(ls(JKEY)), count = j => j && j.scenes ? Object.values(j.scenes).reduce((a, s) => a + s.lines.length, 0) : 0;
   if (cj && count(cj) > count(lj)){ lw(JKEY, jour); Journal.data = cj; } else if (lj) cloudSet(JKEY, ls(JKEY));
   const cset = parse(sets); if (cset && !ls('nz.settings')){ Object.assign(SET, cset); lw('nz.settings', sets); KEYS = keyMap(); applyVolumes(); }
-  const cp = parse(prog), lp = parse(ls(PKEY)); if (cp && (!lp || cp.unlocked > lp.unlocked)) lw(PKEY, prog); else if (lp) cloudSet(PKEY, ls(PKEY));
+  // прогресс с двух устройств складываем, а не перезаписываем: пройденные главы с обоих, лучшие результаты — максимум
+  const cp = parse(prog), lp = parse(ls(PKEY));
+  if (cp || lp){ const a = cp || {}, b = lp || {}, m = Object.assign({}, a, b);
+    m.unlocked = Math.max(a.unlocked || 0, b.unlocked || 0);
+    m.done = [...new Set([...(a.done || []), ...(b.done || [])])];
+    m.best = Object.assign({}, a.best); for (const k in b.best || {}) m.best[k] = Math.max(m.best[k] || 0, b.best[k]);
+    m.run = Object.assign({}, a.run, b.run); if (a.wordsSeen || b.wordsSeen) m.wordsSeen = true;
+    const txt = JSON.stringify(m); lw(PKEY, txt); cloudSet(PKEY, txt); }
   if (!$('title').hidden) showMenu();
 }
 function tgFullscreen(){
