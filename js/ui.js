@@ -2,7 +2,7 @@
 /* =====================================================================
    Интерфейс: вступление, меню, настройки, управление, Telegram, раскладка, цикл.
    ===================================================================== */
-const SCREENS = ['title','pause','settings','about','end','confirm','chapters','play','chars'];
+const SCREENS = ['title','pause','settings','about','end','confirm','chapters','play','chars','words'];
 // куда ведёт «Назад» с каждого экрана меню
 const BACK_TO = {about:'title', play:'title', chars:'title', chapters:'play'};
 let settingsFrom = 'title', confirmFrom = 'title', confirmYes = null;
@@ -26,6 +26,7 @@ function showMenu(){
   $('mPlayInfo').textContent = d ? 'Продолжить: ' + info : 'Начать историю';
   const cards = CHAPTERS.filter(c => !c.group || c.partNo === 1), open = cards.filter(c => c.index <= prog.unlocked).length; // участки главы — одна карточка
   $('mChInfo').textContent = `Открыто ${open} из ${cards.length}`;
+  $('mWords').hidden = !(prog.done || []).includes('ch8'); // послесловие — после финала первой части
   setMusic(true, 'menu');
 }
 function openPause(){ if (!S || S.mode !== 'play' || menuOpen()) return; G1.paused = true; showScreen('pause'); $('pauseCh').textContent = `${curCh().label}. ${curCh().title}`; for (const k in keys) keys[k] = false; sfx.blip(); }
@@ -77,7 +78,7 @@ $('mute').textContent = muted ? '✕' : '♪';
 /* ================= Итоги главы ================= */
 function showEnd(){
   const ch = curCh(), last = S.ch >= CHAPTERS.length - 1, fk = FIND_KINDS[ch.find];
-  $('endKick').textContent = ch.id === 'prologue' ? 'Пролог завершён!' : `${ch.label} завершена!`; $('endTitle').textContent = ch.groupTitle || ch.title;
+  $('endKick').textContent = ch.endKick || (ch.id === 'prologue' ? 'Пролог завершён!' : `${ch.label} завершена!`); $('endTitle').textContent = ch.endTitle || ch.groupTitle || ch.title;
   $('endSub').textContent = ch.endSub || '';
   $('stFind').textContent = fk ? `${S.finds}/${S.W.finds.length}` : '—'; $('stFindL').textContent = fk ? fk.many : '';
   $('stDrops').textContent = S.drops; $('stFaint').textContent = S.faints; $('stTime').textContent = fmtTime(S.play);
@@ -85,12 +86,12 @@ function showEnd(){
     const run = readProgress().run || {}, parts = CHAPTERS.filter(c => c.group === ch.group).map(c => run[c.id]).filter(Boolean), sum = k => parts.reduce((a, r) => a + r[k], 0);
     $('stFind').textContent = `${sum('finds')}/${sum('total')}`; $('stDrops').textContent = sum('drops'); $('stFaint').textContent = sum('faints'); $('stTime').textContent = fmtTime(sum('play')); }
   $('endNote').innerHTML = ch.endNote || ''; $('endNote').hidden = !ch.endNote;
-  $('endNext').textContent = last ? 'В главное меню' : `Далее: ${CHAPTERS[S.ch + 1].title}`;
+  $('endNext').textContent = ch.endNextLabel || (last ? 'В главное меню' : `Далее: ${CHAPTERS[S.ch + 1].title}`);
   $('endMenu').hidden = last; // в последней главе две одинаковые кнопки не нужны
   const fin = last ? 'Продолжение следует.' : (ch.partEnd || ''); $('endFinal').textContent = fin; $('endFinal').hidden = !fin;
   showScreen('end');
 }
-$('endNext').addEventListener('click', () => { if (S.ch >= CHAPTERS.length - 1) showMenu(); else startChapter(S.ch + 1); });
+$('endNext').addEventListener('click', () => { const ch = curCh(); if (ch.afterEnd) ch.afterEnd(); else if (S.ch >= CHAPTERS.length - 1) showMenu(); else startChapter(S.ch + 1); });
 $('endMenu').addEventListener('click', showMenu);
 
 /* ================= Журнал ================= */
@@ -243,6 +244,7 @@ addEventListener('keydown', e => {
   if (isKey('journal', e.code) && !menuOpenNoJournal()){ journalOpen ? closeJournal() : openJournal(); return; }
   if (journalOpen && e.code === 'Escape'){ closeJournal(); return; }
   const open = SCREENS.find(id => !$(id).hidden);
+  if (open === 'words'){ if (e.code === 'Escape') wordsEnd(); else if (['Enter','NumpadEnter','Space','ArrowRight'].includes(e.code) || isKey('jump', e.code)) wordsNext(); e.preventDefault(); return; }
   if (open){
     if (e.code === 'ArrowDown' || e.code === 'ArrowUp'){
       const list = [...$(open).querySelectorAll('button:not([hidden]):not(:disabled)')].filter(b => b.offsetParent !== null);

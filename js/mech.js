@@ -3,14 +3,15 @@
    Механики глав 5–6: колокол-ориентир, оседающие плиты, хрупкие полки, рычаги и стеллажи,
    стража гильдии (зоны видимости), спокойно поднимающаяся Мгла, именные находки;
    с главы 6 — архивные противовесы, эфирные потоки, замки Хранителей под Медный ключ, решётки, вода;
-   с главы 7 — очаги Долины и парящие плиты, эхо Мглы, резонансные колокола, сгустки Мглы, плита Джей.
+   с главы 7 — очаги Долины и парящие плиты, эхо Мглы, резонансные колокола, сгустки Мглы, плита Джей;
+   с главы 8 — цепь древнего моста (закреплена / нагружена / оборвана), лебёдка, мостовые плиты.
    Подключается после engine.js; движок вызывает extendBuilder / parseMech / updateMech / drawMech.
    ===================================================================== */
 
 // ---------- Помощники для build(h) ----------
 function extendBuilder(h, out, F){
   out.levers = []; out.guards = []; out.bells = []; out.findInfo = {}; out.slow = []; out.brittle = [];
-  out.gates = []; out.keylocks = []; out.waters = []; out.switches = [];
+  out.gates = []; out.keylocks = []; out.waters = []; out.switches = []; out.chains = []; out.pairs = [];
   Object.assign(h, {
     // плиты, которые оседают через полторы секунды после того, как на них встали
     slowFade(a, len, r){ for (let i=0;i<len;i++){ h.put(a+i, r, 'f'); out.slow.push((a+i)+','+r); } },
@@ -60,7 +61,16 @@ function extendBuilder(h, out, F){
     // эхо Мглы: призрачная плита. Твёрдая on секунд, потом тает и пропадает на off секунд. phase — сдвиг (сек)
     echo(c, r, len, o={}){ out.movers.push({x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:o.phase || 0, period:1, echo:true, on:o.on || 3, off:o.off || 2, a:1}); },
     // сгусток Мглы: стена тумана в колонках c…c+1. Расходится, пока есть сигнал id (очаг, колокол)
-    clot(c, r0, r1, id, o={}){ h.gate(c, r0, r1, id, Object.assign({look:'mist', w:2}, o)); }
+    clot(c, r0, r1, id, o={}){ h.gate(c, r0, r1, id, Object.assign({look:'mist', w:2}, o)); },
+    // ----- глава 8 -----
+    // цепь древнего моста: от анкера в стене (c0, r0) до плиты (c1, r1). Состояния: 'fixed' → 'strain' → 'broken'
+    chain(c0, r0, c1, r1, id, o={}){ out.chains.push(Object.assign({x0:c0*T + 16, y0:r0*T, x1:c1*T + 16, y1:r1*T, id, state:'fixed', t:0, held:false, sag:24}, o)); },
+    // лебёдка цепи: встать рядом и держать «вниз» need секунд — стопор щёлкает, сигнал id остаётся навсегда
+    winch(c, r, id, o={}){ h.keylock(c, r, id, Object.assign({look:'winch', need:1.6}, o)); },
+    // плита моста на цепи: держится, пока цепь id не оборвана; потом падает
+    // два канала: когда очаги a и b горят одновременно, сигнал id включается навсегда
+    pair(a, b, id){ out.pairs.push({a, b, id}); },
+    span(c, r, len, id){ out.movers.push({x0:c*T, y0:r*T, x:c*T, y:r*T, w:len*T, h:14, dx:0, dy:0, t:0, period:1, span:id, k:1, vy:0}); }
   });
 }
 function parseMech(W, out){
@@ -70,7 +80,8 @@ function parseMech(W, out){
   for (const f of W.finds){ const info = (out.findInfo || {})[Math.floor((f.x - 16)/T) + ',' + Math.round(f.y/T - 1)]; if (info){ f.name = info.name; f.icon = info.icon; } }
   W.bellT = 2;
   W.gates = out.gates || []; W.keylocks = out.keylocks || []; W.waters = out.waters || []; W.forced = {};
-  W.switches = out.switches || []; W.timed = {};
+  W.switches = out.switches || []; W.timed = {}; W.chains = out.chains || []; W.pairs = out.pairs || [];
+  W.slowFades = Object.values(W.fades).filter(f => f.slow);
 }
 
 // ---------- Звук: колокол с панорамой, сердцебиение, капли, рычаг, тревога ----------
@@ -97,6 +108,9 @@ Object.assign(sfx, {
   splash(){ noise(.5, .06, 900, .5); tone(300, .2, 'sine', .02, 120); },
   turn(){ tone(70 + Math.random()*20, .12, 'sawtooth', .012, 60); },
   stone(){ noise(1.8, .07, 240, .4, 0, 'lowpass'); tone(46, 1.4, 'sawtooth', .05, 34); tone(68, 1, 'square', .015, 40, .3); },
+  creak(){ tone(92 + Math.random()*20, .5, 'sawtooth', .025, 70); noise(.35, .03, 600, .4, 0, 'lowpass'); }, // камень трескается, плита сейчас уйдёт
+  strain(){ tone(140 + Math.random()*40, .25, 'square', .018, 110); for (let i=0;i<3;i++) tone(900 + Math.random()*400, .04, 'square', .006, null, i*.06); },
+  snap(){ tone(1600, .08, 'square', .05, 400); noise(.6, .09, 2200, .7); tone(60, 1.2, 'sawtooth', .06, 36, .05); },
   ignite(){ noise(.5, .06, 1200, .5); tone(180, .4, 'triangle', .03, 360); tone(540, .3, 'sine', .02, 900, .05); },
   ember(){ tone(900 + Math.random()*300, .05, 'triangle', .012, 600); },
   resonate(){ bellSound(0, 1); tone(98, 2.6, 'sine', .06, 92); tone(147, 2.2, 'sine', .025, 140, .05); },
@@ -143,7 +157,7 @@ function updateMech(dt, frozen){
 const vis = (x, m=120) => x > S.cam.x - m && x < S.cam.x + VW + m;
 function updateCh6(dt, frozen){
   const W = S.W, p = S.P; if (!W.gates) return;
-  updateCh7(dt, frozen);
+  updateCh7(dt, frozen); updateCh8(dt, frozen);
   const sig = W.forced;
   for (const kl of W.keylocks){ // Медный ключ: держать «вниз» у розетки
     kl.near = !kl.done && p.onGround && Math.abs(p.x + p.w/2 - kl.x) < 44 && Math.abs(p.y + p.h - kl.y) < 12 && (!kl.when || kl.when());
@@ -218,7 +232,7 @@ function startRise(o={}){ const p = S.P; S.rise = {y:o.y ?? p.y + p.h + (o.gap |
 
 // ---------- Отрисовка ----------
 function drawMech(){
-  const W = S.W; if (!W.levers) return; drawCh6(); drawCh7();
+  const W = S.W; if (!W.levers) return; drawCh6(); drawCh7(); drawCh8();
   for (const lv of W.levers){ if (lv.x < S.cam.x - 60 || lv.x > S.cam.x + VW + 60) continue;
     ctx.save(); ctx.translate(lv.x, lv.y);
     pathRR(ctx, -14, -10, 28, 10, 3); fillInk(ctx, '#4A3E36', 1.6);
@@ -259,7 +273,7 @@ function drawCh6(){
         ctx.fillStyle = '#6A6676'; ctx.beginPath(); ctx.moveTo(bx, y0 + hgt - lift); ctx.lineTo(bx + 2.5, y0 + hgt + 7 - lift); ctx.lineTo(bx + 5, y0 + hgt - lift); ctx.fill(); }
       for (let yy = y0 + 22; yy < y0 + hgt; yy += 34){ ctx.fillStyle = '#3A3644'; ctx.fillRect(x, yy - lift, wd, 5); } }
     ctx.restore(); }
-  for (const kl of W.keylocks){ if (!vis(kl.x)) continue; const x = kl.x, y = kl.y - 44; // медная розетка
+  for (const kl of W.keylocks){ if (!vis(kl.x)) continue; const x = kl.x, y = kl.y - 44; if (kl.look === 'winch'){ drawWinch(kl); continue; } // медная розетка
     ctx.beginPath(); ctx.arc(x, y, 26, 0, Math.PI*2); fillInk(ctx, kl.done ? '#D9A85A' : '#9A6A34', 2.4);
     ctx.beginPath(); ctx.arc(x, y, 19, 0, Math.PI*2); ctx.strokeStyle = 'rgba(40,24,10,.6)'; ctx.lineWidth = 2; ctx.stroke();
     ctx.save(); ctx.translate(x, y + 4); ctx.scale(.62, .62); lampSign(ctx, 0, 0); ctx.restore();
@@ -408,6 +422,9 @@ function updateCh7(dt, frozen){
     }
     if (s.left > 0 && s.id) tm[s.id] = Math.max(tm[s.id] || 0, s.left);
   }
+  for (const pr of W.pairs) if (!W.forced[pr.id] && tm[pr.a] > 0 && tm[pr.b] > 0){ // оба канала сошлись
+    W.forced[pr.id] = true; S.flags['pair_' + pr.id] = true; sfx.resonate(); S.shake = Math.max(S.shake, .3); buzz(40);
+    floatText(S.P.x + 12, S.P.y - 40, 'Два канала!', '#FFE3A8'); saveGame(true); }
 }
 // парящие плиты и эхо (вызывается из цикла платформ движка)
 function moveCh7(m, dt){
@@ -512,4 +529,102 @@ Object.assign(DECO_EXTRA, {
   shard(dc){ const x = dc.x, y = dc.y; // светящиеся кристаллы у дороги
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x, y - 14, 34, 'rgba(140,220,240,A)', .25 + .1*Math.sin(S.time*2 + x)); ctx.restore();
     for (const [dx, hh, a] of [[-8, 22, -.3], [0, 32, 0], [9, 18, .35]]){ ctx.save(); ctx.translate(x + dx, y); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(0, -hh); ctx.lineTo(5, 0); ctx.closePath(); fillInk(ctx, 'rgba(150,220,240,.85)', 1.6); ctx.restore(); } }
+});
+
+// ---------- Глава 8: цепь древнего моста ----------
+function updateCh8(dt, frozen){
+  const W = S.W; if (!W.chains) return;
+  for (const f of W.slowFades){ // оседающая плита: сначала трещина и скрип, потом уходит вниз
+    if (f.state === 'shake' && !f.warned){ f.warned = true; if (vis(f.c*T)) sfx.creak(); }
+    else if (f.state === 'ok') f.warned = false; }
+  for (const ch of W.chains){ ch.t += dt;
+    if (ch.state === 'strain' && !frozen){ ch.next = (ch.next ?? 0) - dt;
+      if (ch.next <= 0){ ch.next = .6 + Math.random()*.8; if (vis(ch.x0, 300)) sfx.strain(); S.shake = Math.max(S.shake, .12);
+        burst(ch.x0, ch.y0 + 8, 6, ['#8A8070','#6A6050','#4A4238'], {angle:Math.PI/2, spread:.8, min:20, max:90, g:700, lmax:.9}); } } // осыпь у анкера
+  }
+}
+// цепь натягивает или отпускает плиты моста (вызывается из цикла платформ)
+function moveSpan(m, dt){
+  const ch = S.W.chains.find(c => c.id === m.span), broken = ch && ch.state === 'broken';
+  if (!broken){ m.dx = 0; m.dy = 0; m.off = false; if (ch && ch.state === 'strain'){ const j = Math.sin(S.time*31 + m.x0)*1.2; m.dy = (m.y0 + j) - m.y; m.y = m.y0 + j; } return; }
+  if (m.y > S.W.h + 200){ m.dy = 0; m.off = true; return; } // упала за край мира — дальше не считаем
+  m.vy = Math.min(m.vy + 2200*dt, 1400); const ny = m.y + m.vy*dt; m.dy = ny - m.y; m.y = ny; m.off = true; // оборвалась — плита уходит вниз, на ней не устоять
+}
+function chainSet(id, state){ const ch = S.W.chains.find(c => c.id === id); if (!ch || ch.state === state || ch.state === 'broken') return ch; // обрыв — один раз и навсегда
+  ch.state = state; ch.t = 0;
+  if (state === 'broken'){ sfx.snap(); S.shake = 1; camKick(8); buzz(80); S.flags['chain_' + id] = 'broken';
+    smokePuff(ch.x0, ch.y0, 30); burst(ch.x0, ch.y0, 24, ['#8A8070','#6A6050','#4A4238'], {min:80, max:320, g:900}); }
+  return ch; }
+// смерть до финальной сцены: нагруженная цепь возвращается в исходное, плиты — на место
+function resetCh8(){ const W = S.W; if (!W.chains) return;
+  for (const ch of W.chains) if (ch.state === 'strain' && !ch.held){ ch.state = 'fixed'; ch.t = 0; } // держат цепь — после смерти так и держат
+  for (const m of W.movers) if (m.span !== undefined && S.flags['chain_' + m.span] !== 'broken'){ m.y = m.y0; m.vy = 0; m.off = false; } }
+function drawChain(ch){
+  const {x0, y0, x1, y1} = ch; if (Math.max(x0, x1) < S.cam.x - 60 || Math.min(x0, x1) > S.cam.x + VW + 60) return;
+  const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(6, Math.round(len/14));
+  const tight = ch.state === 'strain' ? 1 : 0, jit = tight ? 1.6 : 0, sag = ch.sag*(1 - tight*.85);
+  const pt = k => { const s = Math.sin(k*Math.PI); return [x0 + (x1 - x0)*k + (jit ? Math.sin(S.time*40 + k*9)*jit : 0), y0 + (y1 - y0)*k + sag*s + (jit ? Math.cos(S.time*37 + k*7)*jit : 0)]; };
+  ctx.save(); ctx.lineCap = 'round';
+  if (ch.state === 'broken'){ // два обрывка: от анкера свисает, второй конец улетел вниз
+    const drop = Math.min(1, ch.t/1.2);
+    ctx.strokeStyle = '#2A2A30'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, y0);
+    for (let i=1;i<=6;i++){ const k = i/6; ctx.lineTo(x0 + Math.sin(ch.t*3 + k*2)*6*(1 - drop*.6)*k, y0 + k*90*drop + k*12); } ctx.stroke();
+    ctx.restore(); return; }
+  for (let i=0;i<n;i++){ const [ax, ay] = pt(i/n), [bx, by] = pt((i + 1)/n), cx = (ax + bx)/2, cy = (ay + by)/2, a = Math.atan2(by - ay, bx - ax);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a); ctx.strokeStyle = INK; ctx.lineWidth = 4.4;
+    if (i % 2){ ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.stroke(); ctx.strokeStyle = '#7A7468'; ctx.lineWidth = 2.4; ctx.stroke(); }
+    else { ctx.beginPath(); ctx.ellipse(0, 0, 7.5, 4, 0, 0, Math.PI*2); ctx.stroke(); ctx.strokeStyle = '#8A8478'; ctx.lineWidth = 2.2; ctx.stroke(); }
+    ctx.restore(); }
+  ctx.fillStyle = '#3A3F4E'; ctx.fillRect(x0 - 14, y0 - 12, 28, 24); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x0 - 14, y0 - 12, 28, 24); // анкер в стене
+  ctx.fillStyle = '#6A6458'; ctx.beginPath(); ctx.arc(x0, y0, 6, 0, Math.PI*2); ctx.fill();
+  if (ch.state === 'strain'){ ctx.strokeStyle = 'rgba(20,16,14,.8)'; ctx.lineWidth = 1.6; ctx.beginPath(); // трещины вокруг анкера растут
+    const g = Math.min(1, ch.t/6); ctx.moveTo(x0 + 14, y0 - 6); ctx.lineTo(x0 + 14 + 16*g, y0 - 14*g); ctx.moveTo(x0 - 14, y0 + 8); ctx.lineTo(x0 - 14 - 12*g, y0 + 18*g); ctx.stroke(); }
+  if (ch.held){ const [sx, sy] = pt(.12); ctx.save(); ctx.translate(sx, sy); ctx.rotate(.5 + Math.sin(S.time*20)*.05); ctx.fillStyle = '#B8863A'; ctx.fillRect(-3, -14, 6, 28); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.strokeRect(-3, -14, 6, 28); ctx.restore(); } // стопор в звене
+  ctx.restore();
+}
+function drawSpan(m){ // плита моста: тёсаный камень, кольцо под цепь
+  const x = m.x, y = m.y, w = m.w; if (x + w < S.cam.x - 40 || x > S.cam.x + VW + 40) return;
+  ctx.fillStyle = INK; ctx.fillRect(x - 1, y - 1, w + 2, 22); ctx.fillStyle = '#5A6270'; ctx.fillRect(x + 1, y + 1, w - 2, 18); ctx.fillStyle = '#727B88'; ctx.fillRect(x + 2, y + 1, w - 4, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; for (let xx = x + 30; xx < x + w - 4; xx += 32) ctx.fillRect(xx, y + 4, 2, 15);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + w/2, y - 2, 5, Math.PI, 0); ctx.stroke();
+}
+function drawWinch(kl){ const x = kl.x, y = kl.y; // лебёдка: стойки, барабан с цепью, медная ручка
+  ctx.fillStyle = '#3A2E26'; ctx.fillRect(x - 22, y - 46, 7, 46); ctx.fillRect(x + 15, y - 46, 7, 46);
+  ctx.beginPath(); ctx.arc(x, y - 34, 15, 0, Math.PI*2); fillInk(ctx, '#5A5A62', 2);
+  const a = kl.done ? 0 : kl.t*4; ctx.save(); ctx.translate(x, y - 34); ctx.rotate(a); ctx.strokeStyle = '#B8863A'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -24); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -26, 4, 0, Math.PI*2); fillInk(ctx, '#D9A85A', 1.4); ctx.restore();
+  if (kl.near || kl.t > 0){ ctx.strokeStyle = 'rgba(255,227,168,.35)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(x, y - 34, 30, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = '#FFE3A8'; ctx.beginPath(); ctx.arc(x, y - 34, 30, -Math.PI/2, -Math.PI/2 + Math.PI*2*Math.min(1, kl.t/kl.need)); ctx.stroke(); }
+  if (kl.near && kl.t === 0){ ctx.font = `800 14px ${SANS}`; ctx.textAlign = 'center'; ctx.fillStyle = '#FFE3A8'; ctx.fillText(fmtHint('Держи {down} — крутить лебёдку'), x, y - 76); }
+  if (kl.done){ ctx.fillStyle = '#B8863A'; ctx.fillRect(x + 10, y - 26, 10, 4); } // стопор щёлкнул
+}
+function drawCh8(){
+  const W = S.W; if (!W.chains) return;
+  for (const f of W.slowFades) if (f.state === 'shake'){ const x = f.c*T, y = f.r*T, k = Math.min(1, f.t/1.5); // трещина по оседающей плите
+    ctx.strokeStyle = `rgba(20,14,10,${.5 + .4*k})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x + 6, y + 2); ctx.lineTo(x + 6 + 10*k, y + 6); ctx.lineTo(x + 12 + 12*k, y + 3 + 6*k); ctx.stroke(); }
+  for (const ch of W.chains) drawChain(ch);
+}
+
+// ---------- Декорации главы 8 ----------
+Object.assign(DECO_EXTRA, {
+  firstfire(dc){ const x = dc.x, y = dc.y, r = (dc.r || 4)*T, t = S.time, hurt = S.flags.fireTorn && !S.flags.fireSplit; // Первый Огонь: живой тёплый свет
+    const pulse = 1 + .06*Math.sin(t*1.6) + (hurt ? .12*Math.sin(t*23) : 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(x, y, r*3.2*pulse, 'rgba(255,200,130,A)', .22); glow(x, y, r*1.8*pulse, 'rgba(255,230,170,A)', .35); glow(x, y, r*.9*pulse, 'rgba(190,240,255,A)', .5);
+    ctx.fillStyle = 'rgba(255,248,225,.9)'; ctx.beginPath(); ctx.arc(x, y, r*.42*pulse, 0, Math.PI*2); ctx.fill();
+    for (let i=0;i<14;i++){ const a = t*.4 + i/14*Math.PI*2, d = r*(.7 + .25*Math.sin(t*1.3 + i)); ctx.fillStyle = i % 2 ? 'rgba(255,214,140,.8)' : 'rgba(170,225,245,.8)'; ctx.fillRect(x + Math.cos(a)*d, y + Math.sin(a)*d*.6, 3, 3); }
+    if (S.flags.fireSplit){ for (const dir of [-1, 1]){ const g = ctx.createLinearGradient(x, y, x + dir*r*4, y - (dir < 0 ? r*3 : 0)); g.addColorStop(0, 'rgba(255,220,150,.5)'); g.addColorStop(1, 'rgba(255,220,150,0)'); // два потока
+      ctx.strokeStyle = g; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + dir*r*2, y - r*(dir < 0 ? 2.4 : .4), x + dir*r*4, y - (dir < 0 ? r*3 : 0)); ctx.stroke(); } }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(200,160,90,.55)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(x, y, r*1.3, r*.5, 0, 0, Math.PI*2); ctx.stroke(); // медное кольцо резонатора
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); },
+  gutters(dc){ const x = dc.x, y = dc.y, w = (dc.w || 10)*T, W = S.W; // два каменных желоба: светятся, когда по ним идёт огонь
+    if (x > S.cam.x + VW + 40 || x + w < S.cam.x - 40) return;
+    const on = id => (W.timed[id] || 0) > 0 || !!W.forced[dc.out];
+    for (const [id, dy] of [[dc.a, -6], [dc.b, -16]]){ ctx.fillStyle = '#2A2E36'; ctx.fillRect(x, y + dy - 3, w, 6);
+      if (on(id)){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,200,120,${.55 + .2*Math.sin(S.time*6 + dy)})`; ctx.fillRect(x, y + dy - 1.5, w, 3); ctx.restore(); } }
+    if (W.forced[dc.out]){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(x + w/2, y - 12, w*.4, 'rgba(255,210,140,A)', .14); ctx.restore(); } },
+  glove(dc){ if (!S.flags[dc.flag || 'glove']) return; const x = dc.x, y = dc.y; // белая перчатка на краю
+    ctx.save(); ctx.translate(x, y - 4); ctx.rotate(-.2); pathRR(ctx, -9, -5, 18, 9, 4); fillInk(ctx, '#EDE6DA', 1.6);
+    for (let i=0;i<4;i++){ pathRR(ctx, 6 + i*0, -6 + i*3, 8, 3, 1.5); fillInk(ctx, '#EDE6DA', 1); } ctx.restore(); }
 });

@@ -6,8 +6,8 @@
 <title>Город гаснущих фонарей</title>
 <meta name="description" content="Повесть-платформер о фонарщице Ае и городе над туманом. Играй прямо в Telegram.">
 <script id="tgsdk" async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/fonts.css?v=0.6.0">
-<link rel="stylesheet" href="css/game.css?v=0.6.0">
+<link rel="stylesheet" href="css/fonts.css?v=0.7.0">
+<link rel="stylesheet" href="css/game.css?v=0.7.0">
 </head>
 <body>
 <div class="splash" id="splash">
@@ -69,6 +69,7 @@
           <button id="mPlay" class="mbtn primary"><i class="ic"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg></i><span>Играть</span><small id="mPlayInfo"></small></button>
           <button id="mChars" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.3c3 .2 5.5 2.4 5.5 5.7"/></svg></i><span>Персонажи</span></button>
           <button id="mSettings" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></i><span>Настройки</span></button>
+          <button id="mWords" class="mbtn" hidden><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l1 3H8z"/><path d="M8 6h8l-1 10H9z"/><path d="M10 20h4M12 16v4"/><path d="M12 9.5c1 1 1 2.2 0 3-1-.8-1-2 0-3z" fill="currentColor"/></svg></i><span>Послесловие</span></button>
           <button id="mAbout" class="mbtn"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.6v.2"/></svg></i><span>Об игре</span></button>
         </nav>
       </div>
@@ -175,6 +176,12 @@
       </div>
     </div>
 
+    <div class="screen words" id="words" hidden>
+      <div class="wcard" id="wCard"><div class="wlamp"></div><small id="wPart"></small><div class="wtext" id="wText"></div></div>
+      <div class="wfoot"><div class="wdots" id="wDots"></div><button class="ghost" id="wSkip">Пропустить</button></div>
+      <p class="wtap">Коснись экрана, чтобы продолжить</p>
+    </div>
+
     <div class="screen" id="end" hidden>
       <div class="panel card">
         <p class="ch" id="endKick"></p>
@@ -195,26 +202,30 @@
   <p class="hint">Город гаснущих фонарей · Автор: Ночной Кот · <span>управление: стрелки / A D, прыжок — пробел</span></p>
 </div>
 
-<script src="js/core.js?v=0.6.0"></script>
-<script src="js/characters.js?v=0.6.0"></script>
-<script src="js/engine.js?v=0.6.0"></script>
-<script src="js/mech.js?v=0.6.0"></script>
-<script src="js/render.js?v=0.6.0"></script>
-<script src="chapters/prologue.js?v=0.6.0"></script>
-<script src="chapters/ch1.js?v=0.6.0"></script>
-<script src="chapters/ch2.js?v=0.6.0"></script>
-<script src="chapters/ch3.js?v=0.6.0"></script>
-<script src="chapters/ch4.js?v=0.6.0"></script>
-<script src="chapters/ch5a.js?v=0.6.0"></script>
-<script src="chapters/ch5b.js?v=0.6.0"></script>
-<script src="chapters/ch5.js?v=0.6.0"></script>
-<script src="chapters/ch6a.js?v=0.6.0"></script>
-<script src="chapters/ch6b.js?v=0.6.0"></script>
-<script src="chapters/ch6.js?v=0.6.0"></script>
-<script src="chapters/ch7a.js?v=0.6.0"></script>
-<script src="chapters/ch7b.js?v=0.6.0"></script>
-<script src="chapters/ch7.js?v=0.6.0"></script>
-<script src="js/bios.js?v=0.6.0"></script>
-<script src="js/biostory.js?v=0.6.0"></script>
-<script src="js/ui.js?v=0.6.0"></script>
+<script src="js/core.js?v=0.7.0"></script>
+<script src="js/characters.js?v=0.7.0"></script>
+<script src="js/engine.js?v=0.7.0"></script>
+<script src="js/mech.js?v=0.7.0"></script>
+<script src="js/render.js?v=0.7.0"></script>
+<script src="chapters/prologue.js?v=0.7.0"></script>
+<script src="chapters/ch1.js?v=0.7.0"></script>
+<script src="chapters/ch2.js?v=0.7.0"></script>
+<script src="chapters/ch3.js?v=0.7.0"></script>
+<script src="chapters/ch4.js?v=0.7.0"></script>
+<script src="chapters/ch5a.js?v=0.7.0"></script>
+<script src="chapters/ch5b.js?v=0.7.0"></script>
+<script src="chapters/ch5.js?v=0.7.0"></script>
+<script src="chapters/ch6a.js?v=0.7.0"></script>
+<script src="chapters/ch6b.js?v=0.7.0"></script>
+<script src="chapters/ch6.js?v=0.7.0"></script>
+<script src="chapters/ch7a.js?v=0.7.0"></script>
+<script src="chapters/ch7b.js?v=0.7.0"></script>
+<script src="chapters/ch7.js?v=0.7.0"></script>
+<script src="chapters/ch8a.js?v=0.7.0"></script>
+<script src="chapters/ch8b.js?v=0.7.0"></script>
+<script src="chapters/ch8.js?v=0.7.0"></script>
+<script src="js/bios.js?v=0.7.0"></script>
+<script src="js/biostory.js?v=0.7.0"></script>
+<script src="js/ui.js?v=0.7.0"></script>
+<script src="js/words.js?v=0.7.0"></script>
 </body></html>

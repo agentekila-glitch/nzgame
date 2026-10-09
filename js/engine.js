@@ -147,11 +147,13 @@ function respawn(){
   const p = S.P; p.x = p.checkpoint.x; p.y = p.checkpoint.y; p.vx = 0; p.vy = 0; p.inv = 1.2; p.mover = null; S.hp = 3; S.mode = 'play';
   if (S.wave) S.wave.x = Math.min(S.wave.x, p.x - 460);
   if (S.chase && S.chase.reset) S.chase.reset();
+  resetCh8(); const chr = curCh(); if (chr.onRespawn) chr.onRespawn(); // мост и цепь — как до сцены
   S.cam.x = clamp(p.x - VW*.4, 0, S.W.w - VW); S.cam.y = clamp(p.y - VH*.6, 0, S.W.h - VH); S.cam.vx = S.cam.vy = S.cam.look = 0;
 }
 function fallOut(){ const p = S.P; S.hp--; sfx.hurt(); buzz(40); S.flash = .2;
   if (S.hp <= 0){ faint(); return; }
-  p.x = p.checkpoint.x; p.y = p.checkpoint.y; p.vx = 0; p.vy = 0; p.inv = 1.3; p.mover = null; if (S.wave) S.wave.x = Math.min(S.wave.x, p.x - 460); }
+  p.x = p.checkpoint.x; p.y = p.checkpoint.y; p.vx = 0; p.vy = 0; p.inv = 1.3; p.mover = null; if (S.wave) S.wave.x = Math.min(S.wave.x, p.x - 460);
+  resetCh8(); const chr = curCh(); if (chr.onRespawn) chr.onRespawn(); }
 
 /* ================= Игрок ================= */
 function updatePlayer(dt){
@@ -273,6 +275,7 @@ function updateWorld(dt, interact){
     if (m.lever !== undefined){ moveShelf(m, dt); continue; }
     if (m.cw || m.cwB){ moveCw(m, dt); continue; }
     if (m.heat !== undefined || m.echo){ moveCh7(m, dt); continue; }
+    if (m.span !== undefined){ moveSpan(m, dt); continue; }
     m.t += dt; const k = (1 - Math.cos(m.t/m.period*Math.PI*2))/2, nx = lerp(m.x0, m.x1, k), ny = lerp(m.y0, m.y1, k);
     m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny;
   }
@@ -478,7 +481,7 @@ function nextLine(){
   if (L.m !== undefined || L.off){} // воспоминание или голос из-за кадра — портреты не трогаем
   else if (who && sc.slots.L && sc.slots.L.who === who && !sc.slots.L.leave){}
   else if (who && (!sc.slots.R || sc.slots.R.who !== who || sc.slots.R.leave)) sc.slots.R = {who};
-  $('dlg').classList.add('on'); $('dlg').classList.toggle('narr', !who);
+  $('dlg').classList.toggle('on', !!L.t); $('dlg').classList.toggle('narr', !who); // кадр без текста — окно скрыто
   $('dName').textContent = L.n || ''; $('dlg').style.setProperty('--nc', NAMECOL[who] || '#6E6478');
   $('dText').textContent = '';
 }
@@ -504,6 +507,10 @@ function updateScene(dt){
   const sc = S.scene; if (!sc) return; sc.t += dt;
   const L = sc.lines[sc.i]; if (!L) return;
   if (L.wait && sc.t < L.wait && !advanceQueued) return; // тишина перед репликой
+  if (L.dur !== undefined){ // кадр катсцены: перелистывается сам, касание — раньше (одно касание = один кадр)
+    if (advanceQueued && sc.t < .4) advanceQueued = false;
+    if (!L.t){ if (sc.t >= L.dur || advanceQueued){ advanceQueued = false; nextLine(); } return; }
+    if (sc.shown >= L.t.length && sc.t >= L.dur){ nextLine(); return; } }
   const full = L.t.length;
   if (sc.shown < full){ const before = Math.floor(sc.shown); sc.shown = Math.min(full, sc.shown + dt*TEXT_CPS[SET.text]); if (sc.shown >= full) $('dText').textContent = L.t; sc.idle = 0;
     if (Math.floor(sc.shown) !== before){ $('dText').textContent = L.t.slice(0, Math.floor(sc.shown)); if (Math.floor(sc.shown) % 3 === 0 && sc.who) sfx.blip(); } }
@@ -649,7 +656,7 @@ function chapterComplete(){
   if (ch.group){ const p = readProgress(); p.run = p.run || {}; p.run[ch.id] = {finds:S.finds, total:S.W.finds.length, drops:S.drops, faints:S.faints, play:S.play}; store.set(PKEY, JSON.stringify(p)); }
   if (ch.noStats){ setTimeout(() => startChapter(next), 400); return; }
   setMusic(true, S.ch >= CHAPTERS.length - 1 ? 'hope' : 'title');
-  setTimeout(showEnd, 700);
+  setTimeout(showEnd, ch.endDelay ? ch.endDelay*1000 : 700); // у финала сначала свой кадр, потом итоги
 }
 // Короткий доступ для сцен в главах
 const G1 = { S:null, paused:false };
@@ -675,5 +682,8 @@ const api = {
   checkpoint(c, r){ S.P.checkpoint = {x:c*T, y:r*T - S.P.h}; S.checkpointOverride = {x:c*T, y:r*T - S.P.h}; },
   card(){ startCard(); },
   // тень вылезает из тумана: c — колонка, s — ряд поверхности, на которой она встанет
+  // глава 8: цепь моста и финал
+  chainStrain(id){ chainSet(id, 'strain'); }, chainHold(id, v=true){ const ch = S.W.chains.find(c => c.id === id); if (ch) ch.held = v; },
+  chainBreak(id){ chainSet(id, 'broken'); },
   shade(c, s){ S.W.kl.push({x:c*T + 3, y:s*T - 24, w:26, h:24, vx:0, vy:0, dir:-1, speed:rnd(48,66), t:0, dead:0, onGround:false}); smokePuff(c*T + 16, s*T - 12, 10); }
 };

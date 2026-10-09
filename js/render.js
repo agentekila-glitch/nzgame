@@ -370,6 +370,19 @@ THEMES.valley = {
     for (let i=0;i<6;i++){ const x = ((i*260 - S.cam.x*.7 + S.time*10) % (VW + 300) + VW + 300) % (VW + 300) - 150; ctx.beginPath(); ctx.ellipse(x, base - 40 - (i%3)*22, 150, 18, 0, 0, Math.PI*2); ctx.fill(); }
     ctx.restore(); }
 };
+// Глава 8: Сердце Долины — круглые залы из старого камня, тёплый свет Первого Огня сквозь Мглу
+THEMES.heart = Object.assign({}, THEMES.valley, {
+  vignette:'rgba(10,6,4,.55)', stone:['#5E5A56','#54504C','#4A4642','#403C39','#36332F'],
+  sky(){
+    const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, '#2A3A44'); g.addColorStop(.5, '#1A2228'); g.addColorStop(1, '#0E1214');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    glow(VW*.6 - S.cam.x*.03, VH*.45 - S.cam.y*.03, VW*.75, 'rgba(255,190,120,A)', .14 + .03*Math.sin(S.time*1.6)); // свет Сердца сквозь туман
+    for (let i=0;i<34;i++){ const x = ((hash(i,6,3) % 1000)/1000*VW*1.4 - S.cam.x*.05) % VW, y = VH - ((S.time*(10 + i%5*3) + i*47) % VH);
+      ctx.fillStyle = `rgba(${i%3 ? '255,214,150' : '170,225,240'},${.25 + .2*Math.sin(S.time + i)})`; ctx.fillRect((x + VW) % VW, y, 1.8, 1.8); } // искры летят вверх
+    ctx.restore();
+  }
+});
 const FIND_KINDS = {
   letter:{one:'Письмо', many:'Письма Черри'},
   boltik:{one:'Болтунчик', many:'Болтунчики Гисы'},
@@ -399,7 +412,7 @@ function buildLayers(){
     FG.push(c);
   }
   FG.items = []; const R2 = seeded(31 + S.ch);
-  if (kind !== 'stair' && kind !== 'valley') // над Мглой и под ней листьев на переднем плане нет
+  if (kind !== 'stair' && kind !== 'valley' && kind !== 'heart') // над Мглой и под ней листьев на переднем плане нет
   for (let x = 400; x < W*1.3; x += 620 + R2()*480) FG.items.push({x, img:Math.floor(R2()*4), s:.6 + R2()*.35, flip:R2() < .5});
   GRAIN = mk(160, 160); const gx = GRAIN.getContext('2d'), id = gx.createImageData(160, 160);
   for (let i=0;i<id.data.length;i+=4){ const v = 128 + (Math.random()-.5)*90; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; }
@@ -592,6 +605,7 @@ function drawMover(m){
   if (m.x + m.w < S.cam.x - 40 || m.x > S.cam.x + VW + 40) return; // за экраном не рисуем
   if (m.cw || m.cwB){ drawCw(m); return; }
   if (m.heat !== undefined || m.echo){ drawCh7Mover(m); return; }
+  if (m.span !== undefined){ drawSpan(m); return; }
   const x = m.x, y = m.y, w = m.w, clock = theme() === THEMES.clock;
   if (m.shelf){ ctx.fillStyle = '#5A3A24'; ctx.fillRect(x, y, w, 12); ctx.fillStyle = '#7A5634'; ctx.fillRect(x, y, w, 3); ctx.fillStyle = INK; ctx.fillRect(x, y - 2, w, 2); ctx.fillRect(x, y + 12, w, 2);
     for (let xx = x + 4; xx < x + w - 8; xx += 9){ const hh = 12 + (hash(xx|0, 1, 7) % 8); ctx.fillStyle = ['#7A3A2A','#3A5A6A','#8A7A3A','#4A3A5A'][hash(xx|0, 2, 5) % 4]; ctx.fillRect(xx, y - hh, 7, hh); }
@@ -861,7 +875,7 @@ function drawSlides(){
   ctx.save(); slides[cur](S.time); ctx.restore();
   if (sc.prevSlide !== undefined && sc.prevSlide !== cur && t < .8){ ctx.save(); ctx.globalAlpha = 1 - t/.8; slides[sc.prevSlide](S.time); ctx.restore(); }
   const vg = ctx.createRadialGradient(VW/2, VH/2, VH*.4, VW/2, VH/2, VH); vg.addColorStop(0, 'rgba(10,8,20,0)'); vg.addColorStop(1, 'rgba(10,8,20,.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
-  ctx.font = `800 12px ${SANS}`; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(244,237,223,.6)'; ctx.fillText('ПРОЛОГ', 24, 30);
+  ctx.font = `800 12px ${SANS}`; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(244,237,223,.6)'; ctx.fillText(sc.def.slideLabel ?? 'ПРОЛОГ', 24, 30);
 }
 /* ================= Фон главного меню =================
    Своя сцена, не зависящая от глав: тихий вечер на крыше. Ая у фонаря, рядом Искра, на трубе дремлет Генерал,
@@ -1046,6 +1060,7 @@ function render(){
   if (S.bioPlay){ drawStory(); if (S.fadeIn > 0){ ctx.fillStyle = `rgba(8,8,16,${Math.min(1, S.fadeIn/.8)})`; ctx.fillRect(0, 0, VW, VH); } return; }
   if (S.mode === 'title'){ drawMenuScene(); return; } // у меню свой фон, не зависящий от глав
   if (!LAYERS) buildLayers();
+  if (S.mode === 'end' && S.endSlide !== undefined && curCh().slides){ inBaseFrame(() => curCh().slides[S.endSlide](S.time)); return; } // свой кадр под экраном итогов
   if (S.prologue && S.scene){ inBaseFrame(() => { drawSlides(); ctx.save(); ctx.translate(-S.cam.x, -S.cam.y); drawParticles(false); ctx.restore(); }); return; }
   const th = theme(), sh = (S.shake > 0 && !REDUCED && SET.shake) ? 7*Math.min(1, S.shake/.3) : 0;
   ctx.save(); ctx.translate(sh ? rnd(-sh, sh) : 0, (sh ? rnd(-sh, sh) : 0));
