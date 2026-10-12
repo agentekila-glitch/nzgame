@@ -97,42 +97,10 @@ const SLIDES = [
     lampPost(VW*.5, VH*.74, 1.3, 1);
     ctx.fillStyle = '#1C1626'; ctx.fillRect(VW*.495, VH*.21, 10, VH*.54); ctx.fillRect(VW*.34, VH*.47, VW*.32, 10);
     if (k > 3){ ctx.fillStyle = `rgba(0,0,0,${Math.min(1, (k - 3)/2)})`; ctx.fillRect(0, 0, VW, VH); } },
-  // ---------- скрытая сцена: только для игрока ----------
-  function hand(t){ // 11. темнота, осыпается песок; на камне рука в тёмной перчатке, пальцы едва сгибаются
-    ctx.fillStyle = '#030408'; ctx.fillRect(0, 0, VW, VH); const k = sk(), a = Math.min(1, k/2);
-    ctx.save(); ctx.globalAlpha = a;
-    for (let i=0;i<26;i++){ const x = (hash(i,9,4) % VW), y = (t*30 + i*41) % VH; ctx.fillStyle = 'rgba(150,170,180,.25)'; ctx.fillRect(x, y, 1.4, 3); } // песок
-    ctx.fillStyle = '#1A1E24'; ctx.beginPath(); ctx.ellipse(VW*.5, VH*.84, VW*.42, 60, 0, 0, Math.PI*2); ctx.fill(); // камень
-    warm(VW*.5, VH*.7, 220, .06, 'rgba(120,200,220,A)');
-    const bend = k > 2.4 ? Math.min(1, (k - 2.4)/1.2) : 0;
-    ctx.translate(VW*.5, VH*.72); ctx.fillStyle = '#16161E'; ctx.strokeStyle = '#05050A'; ctx.lineWidth = 3;
-    ctx.fillRect(-170, -16, 120, 34); // рукав
-    ctx.fillStyle = '#25304F'; ctx.fillRect(-176, -18, 14, 38); // край пальто
-    ctx.fillStyle = '#1E7A84'; ctx.fillRect(-170, 14, 120, 4); // бирюзовая подкладка
-    ctx.fillStyle = '#16161E'; pathRR(ctx, -54, -22, 70, 44, 14); ctx.fill(); ctx.stroke(); // ладонь
-    for (let i=0;i<4;i++){ const y = -18 + i*12; ctx.save(); ctx.translate(14, y); ctx.rotate(bend*(.5 + i*.08)); pathRR(ctx, 0, -5, 46 - i*4, 11, 5); ctx.fill(); ctx.stroke(); ctx.restore(); }
-    ctx.save(); ctx.translate(-22, 0); ctx.scale(.9, .9); ctx.globalAlpha = a*.55; lampSign(ctx, 0, 0, true); ctx.restore(); // сломанный знак на перчатке
-    ctx.restore(); },
-  function eyes(t){ // 12. он открывает глаза и долго смотрит вверх
-    ctx.fillStyle = '#030408'; ctx.fillRect(0, 0, VW, VH); const k = sk(), open = Math.min(1, Math.max(0, (k - 1.2)/1.4));
-    warm(VW*.5, VH*.5, 260, .05, 'rgba(120,200,220,A)');
-    ctx.save(); ctx.translate(VW*.5, VH*.5); ctx.fillStyle = '#0C0E14'; ctx.beginPath(); ctx.ellipse(0, 0, 260, 150, 0, 0, Math.PI*2); ctx.fill(); // лицо в темноте
-    ctx.fillStyle = '#05060A'; ctx.beginPath(); ctx.moveTo(-280, -40); ctx.quadraticCurveTo(0, -150, 280, -40); ctx.lineTo(280, -160); ctx.lineTo(-280, -160); ctx.fill(); // волосы
-    for (const ex of [-80, 80]){ const h = 3 + 15*open;
-      if (open > 0){ warm(ex, 4, 60, .3*open, 'rgba(232,162,58,A)'); ctx.fillStyle = `rgba(232,162,58,${.85*open})`; ctx.beginPath(); ctx.ellipse(ex, 4, 26, h, 0, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#05060A'; ctx.beginPath(); ctx.arc(ex, 4 - 3*open, 7*open, 0, Math.PI*2); ctx.fill(); }
-      ctx.strokeStyle = '#1A1C24'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(ex - 30, 4); ctx.quadraticCurveTo(ex, 4 - 16*open - 2, ex + 30, 4); ctx.stroke(); }
-    ctx.strokeStyle = 'rgba(80,80,90,.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-110, -40); ctx.lineTo(-60, -10); ctx.stroke(); // шрам через бровь
-    ctx.restore(); },
-  function rise(t){ // 13. пробует подняться — сил не хватает; сбоку тянет холодным воздухом, он поворачивает голову. Затемнение
-    ctx.fillStyle = '#04060A'; ctx.fillRect(0, 0, VW, VH); const k = sk();
-    for (let i=0;i<6;i++){ const y = VH*.35 + i*26, x = ((t*60 + i*170) % (VW + 300)) - 300; ctx.fillStyle = 'rgba(120,170,190,.08)'; ctx.beginPath(); ctx.ellipse(x, y, 160, 10, 0, 0, Math.PI*2); ctx.fill(); } // холодный воздух сбоку
-    const lift = k > 1 && k < 3 ? Math.sin((k - 1)/2*Math.PI)*.25 : 0;
-    ctx.save(); ctx.translate(VW*.56, VH*.8); ctx.rotate(-Math.PI/2 + lift); ctx.scale(2.6, 2.6);
-    drawChar(ctx, 'axel', {t:0, blink:false, emo:'tired'}); ctx.restore();
-    ctx.fillStyle = 'rgba(3,5,9,.8)'; ctx.fillRect(0, 0, VW, VH);
-    if (k > 3.4){ const a = Math.min(1, (k - 3.4)); ctx.fillStyle = `rgba(232,162,58,${.8*a})`; ctx.fillRect(VW*.56 - 133, VH*.8 - 8, 3, 3); ctx.fillRect(VW*.56 - 133, VH*.8 + 2, 3, 3); } // глаза смотрят в сторону сквозняка
-    if (k > 6){ ctx.fillStyle = `rgba(0,0,0,${Math.min(1, (k - 6)/1.5)})`; ctx.fillRect(0, 0, VW, VH); } },
+  // ---------- скрытая сцена: только для игрока (chapters/ch8x.js) ----------
+  function hiddenDepth(){ STRANGER_SHOTS[0](sk()); },  // 11. дно: рука в перчатке сжимает звено
+  function hiddenEyes(){ STRANGER_SHOTS[1](sk()); },   // 12. он открывает глаза и дышит
+  function hiddenRise(){ STRANGER_SHOTS[2](sk()); },   // 13. пробует подняться, огонёк, отпускает звено, затемнение
   // ---------- экран «Глава пройдена»: Ая у фонаря, фитиль дрожит и загорается, Искра отвечает вспышкой ----------
   function endFrame(t){
     const k = S.endT || 0; bg('#121634', '#2A2440');
@@ -180,8 +148,8 @@ chapter({
     h.trig(59, 'chain');
     // C. Выход из Сердца
     h.ground(85, 148, 16); h.lamp(100, 15);
-    h.npc('jay2', 'jay', 94, 16, {hidden:true, face:-1, lookAt:false, barks:['Если мост снова заскрипит, я туда не пойду. Ну… не сразу.']});
-    h.npc('era2', 'era', 97, 16, {hidden:true, face:-1, lookAt:false, barks:['Я пересчитала ступени. Их меньше, чем в чертежах. Опять.']});
+    h.npc('jay2', 'jay', 94, 16, {hidden:true, face:-1, lookAt:false, barks:['Ая, сюда! Не останавливайся!']});
+    h.npc('era2', 'era', 97, 16, {hidden:true, face:-1, lookAt:false, barks:['Держись середины, края моста осыпаются!']});
     h.trig(88, 'collapse');
   },
   onPlay(){ mist(); },
@@ -262,25 +230,26 @@ chapter({
       {n:'Ая', e:'sad', t:'Нет…'},
       {n:'', t:'Она делает шаг назад, но под ногами уже трещит камень. Искра тускнеет и прижимается к её плечу.'},
       {n:'', t:'Несколько секунд слышно только осыпающийся камень.', wait:1.6, sfx:'crumble'},
-      {n:'Джей', t:'Ая. Нам наверх.', act(){ api.focus(92, 13); }},
-      {n:'', t:'Ая не отвечает.'},
-      {n:'Джей', t:'Слышишь? Тут больше нечего держать.'},
-      {n:'', t:'Ая закрывает глаза. Потом медленно кивает.', wait:.8},
+      {n:'', t:'Сзади слышны быстрые шаги. Джей и Эра подбегают к краю площадки и останавливаются рядом с Аей.',
+        act(){ const x = S.P.x/T; api.walk('jay2', x + 1.4, 150); api.walk('era2', x + 2.6, 150); api.focus(84, 13); }},
+      {n:'Джей', e:'surprised', t:'Где он? Куда подевался Странник? Он же бежал позади нас.'},
+      {n:'', t:'Ая не отвечает. Внизу медленно оседает Мгла, и в ней видна только пыль.'},
+      {n:'Эра', e:'worried', t:'Цепь ушла вниз вместе с креплением. Я видела, как вылетел анкер, и даже не успела крикнуть.'},
+      {n:'', t:'Планшет выскальзывает у неё из рук и падает на камень. Эра не в том состоянии, чтобы его поднять.'},
+      {n:'Джей', e:'angry', t:'Нет, так нельзя. Он должен был бежать за нами, он же сам всех гнал на мост!'},
+      {n:'', t:'Джей делает шаг к обрыву. Эра хватает её за рукав и держит изо всех сил.', act(){ api.walk('jay2', S.P.x/T - .6, 90); }},
+      {n:'Эра', t:'Джей, там больше нет моста. Ты ему ничем не поможешь.'},
+      {n:'Джей', e:'angry', t:'Я не помогать иду! Я должна увидеть сама!'},
+      {n:'', t:'Голос у неё срывается. Она замолкает и больше не вырывается.'},
+      {n:'', t:'Несколько секунд все трое смотрят туда, где только что была цепь.', wait:1.6, vol:.35},
+      {n:'Ая', r:'тихо', t:'Он сказал, что держит.'},
+      {n:'Эра', e:'sad', t:'Он и держал. До последнего звена.'},
+      {n:'', t:'Джей зло вытирает лицо рукавом, будто сердится на саму себя.'},
+      {n:'Джей', e:'tired', t:'Ая, пойдём наверх. Если мы останемся здесь, всё, что он сделал, будет зря.'},
+      {n:'', t:'Ая долго не двигается. Потом кивает.', wait:1},
       {n:'Ая', e:'tired', t:'Дед ждёт.'},
-      {n:'Джей', t:'Тогда пойдём. У нас хлеб остался. Правда, жёсткий.', music:'emotional_warm', vol:.5},
-      {n:'Ая', t:'Разберёмся.'},
-      {n:'Джей', t:'Вот и хорошо. Зато свой.'},
-      {n:'', t:'Эра проверяет планшет. Бумага отсырела, линии расплылись. Она стучит по нему пальцем.'},
-      {n:'Эра', t:'Придётся всё перемерить.'},
-      {n:'Джей', e:'smug', t:'Ты только спустилась, а уже нашла себе работу.'},
-      {n:'Эра', t:'Кто-то же должен.'},
-      {n:'Джей', t:'Значит, будешь моей соседкой.'},
-      {n:'Эра', t:'Я ещё не соглашалась.'},
-      {n:'Джей', e:'smug', t:'Поздно. Я уже решила, где поставлю твою кровать.'},
-      {n:'', t:'Эра смотрит на неё. Потом убирает планшет.'},
-      {n:'Эра', t:'У стены. Там меньше сквозит.'},
-      {n:'Джей', e:'happy', t:'Вот. Уже обжилась.'},
-      {n:'', t:'Ая коротко усмехается. Улыбка быстро исчезает, но она больше не стоит на месте.'}
+      {n:'', t:'Эра поднимает планшет. Бумага отсырела, линии расплылись. Она прижимает его к груди, не смотря на чертежи.'},
+      {n:'', t:'Джей берёт Аю за руку. Втроём они поднимаются по ступеням. Никто не оборачивается, кроме Искры.'}
     ], end(){ api.focus(null); startScene('cut'); } },
     // катсцена: кадры почти без слов, эпилог — поверх рисунков
     cut:{ slides:true, slideLabel:'ГЛАВА 8', title:'После', lines:[
@@ -331,10 +300,10 @@ chapter({
       {n:'', t:'', slide:10, dur:5.5, vol:.3, music:'warm'}
     ], end(){ S.endSlide = 14; S.endT = 0; S.endFx1 = S.endFx2 = false; api.complete(); } }, // дальше — «Глава пройдена», финальные слова, скрытая сцена
     // скрытая сцена — только для игрока, после финальных слов
-    hidden:{ slides:true, slideLabel:'', noJournal:true, title:'…', lines:[
-      {n:'', t:'', slide:11, dur:6, music:'mist_calling', vol:.35},
-      {n:'', t:'', slide:12, dur:5},
-      {n:'', t:'', slide:13, dur:8}
+    hidden:{ slides:true, slideLabel:'', noJournal:true, noFade:true, title:'…', lines:[
+      {n:'', t:'', slide:11, dur:8.5, music:'mist_calling', vol:.35},
+      {n:'', t:'', slide:12, dur:6.5},
+      {n:'', t:'', slide:13, dur:11.4}
     ], end(){ showMenu(); } }
   }
 });
