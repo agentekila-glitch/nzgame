@@ -5,9 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Город гаснущих фонарей</title>
 <meta name="description" content="Повесть-платформер о фонарщице Ае и городе над туманом. Играй прямо в Telegram.">
+<script>
+/* Ошибки при загрузке видны прямо на экране: даже если игра не запустилась, игрок увидит, какой файл не загрузился или что сломалось */
+(function(){ var box = null, n = 0;
+  function show(m){ if (n++ > 5) return; if (!box){ box = document.createElement('div'); box.id = 'bootErr';
+    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:rgba(120,20,30,.94);color:#fff;font:12px/1.45 monospace;padding:8px 10px;border-radius:6px;white-space:pre-wrap;pointer-events:none';
+    (document.body || document.documentElement).appendChild(box); }
+    box.textContent += (box.textContent ? '\n' : '') + m; }
+  window.addEventListener('error', function(e){ var t = e.target;
+    if (t && t !== window && (t.src || t.href)){ var u = t.src || t.href; if (u.indexOf('telegram.org') < 0) show('Не загрузился файл: ' + u.split('/').slice(-2).join('/')); return; }
+    show('Ошибка: ' + (e.message || '') + (e.filename ? ' (' + e.filename.split('/').pop().split('?')[0] + ':' + e.lineno + ')' : '')); }, true);
+  window.addEventListener('unhandledrejection', function(e){ var r = e.reason; show('Ошибка: ' + (r && (r.message || r))); });
+})();
+</script>
 <script id="tgsdk" async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="css/fonts.css?v=0.7.1">
-<link rel="stylesheet" href="css/game.css?v=0.7.1">
+<link rel="stylesheet" href="css/fonts.css?v=0.7.2">
+<link rel="stylesheet" href="css/game.css?v=0.7.2">
 </head>
 <body>
 <div class="splash" id="splash">
@@ -202,31 +215,31 @@
   <p class="hint">Город гаснущих фонарей · Автор: Ночной Кот · <span>управление: стрелки / A D, прыжок — пробел</span></p>
 </div>
 
-<script src="js/core.js?v=0.7.1"></script>
-<script src="js/characters.js?v=0.7.1"></script>
-<script src="js/engine.js?v=0.7.1"></script>
-<script src="js/mech.js?v=0.7.1"></script>
-<script src="js/render.js?v=0.7.1"></script>
-<script src="chapters/prologue.js?v=0.7.1"></script>
-<script src="chapters/ch1.js?v=0.7.1"></script>
-<script src="chapters/ch2.js?v=0.7.1"></script>
-<script src="chapters/ch3.js?v=0.7.1"></script>
-<script src="chapters/ch4.js?v=0.7.1"></script>
-<script src="chapters/ch5a.js?v=0.7.1"></script>
-<script src="chapters/ch5b.js?v=0.7.1"></script>
-<script src="chapters/ch5.js?v=0.7.1"></script>
-<script src="chapters/ch6a.js?v=0.7.1"></script>
-<script src="chapters/ch6b.js?v=0.7.1"></script>
-<script src="chapters/ch6.js?v=0.7.1"></script>
-<script src="chapters/ch7a.js?v=0.7.1"></script>
-<script src="chapters/ch7b.js?v=0.7.1"></script>
-<script src="chapters/ch7.js?v=0.7.1"></script>
-<script src="chapters/ch8a.js?v=0.7.1"></script>
-<script src="chapters/ch8b.js?v=0.7.1"></script>
-<script src="chapters/ch8x.js?v=0.7.1"></script>
-<script src="chapters/ch8.js?v=0.7.1"></script>
-<script src="js/bios.js?v=0.7.1"></script>
-<script src="js/biostory.js?v=0.7.1"></script>
-<script src="js/ui.js?v=0.7.1"></script>
-<script src="js/words.js?v=0.7.1"></script>
+<script src="js/core.js?v=0.7.2"></script>
+<script src="js/characters.js?v=0.7.2"></script>
+<script src="js/engine.js?v=0.7.2"></script>
+<script src="js/mech.js?v=0.7.2"></script>
+<script src="js/render.js?v=0.7.2"></script>
+<script src="chapters/prologue.js?v=0.7.2"></script>
+<script src="chapters/ch1.js?v=0.7.2"></script>
+<script src="chapters/ch2.js?v=0.7.2"></script>
+<script src="chapters/ch3.js?v=0.7.2"></script>
+<script src="chapters/ch4.js?v=0.7.2"></script>
+<script src="chapters/ch5a.js?v=0.7.2"></script>
+<script src="chapters/ch5b.js?v=0.7.2"></script>
+<script src="chapters/ch5.js?v=0.7.2"></script>
+<script src="chapters/ch6a.js?v=0.7.2"></script>
+<script src="chapters/ch6b.js?v=0.7.2"></script>
+<script src="chapters/ch6.js?v=0.7.2"></script>
+<script src="chapters/ch7a.js?v=0.7.2"></script>
+<script src="chapters/ch7b.js?v=0.7.2"></script>
+<script src="chapters/ch7.js?v=0.7.2"></script>
+<script src="chapters/ch8a.js?v=0.7.2"></script>
+<script src="chapters/ch8b.js?v=0.7.2"></script>
+<script src="chapters/ch8x.js?v=0.7.2"></script>
+<script src="chapters/ch8.js?v=0.7.2"></script>
+<script src="js/bios.js?v=0.7.2"></script>
+<script src="js/biostory.js?v=0.7.2"></script>
+<script src="js/ui.js?v=0.7.2"></script>
+<script src="js/words.js?v=0.7.2"></script>
 </body></html>

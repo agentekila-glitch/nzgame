@@ -873,7 +873,8 @@ function drawSlides(){
   const sc = S.scene, slides = curCh().slides; if (!sc || !slides) return;
   const t = sc.slideT || 0, cur = sc.slide || 0;
   ctx.save(); slides[cur](S.time); ctx.restore();
-  if (sc.prevSlide !== undefined && sc.prevSlide !== cur && t < .8 && !sc.def.noFade){ // noFade — кадры сами уходят в черноту и появляются из неё ctx.save(); ctx.globalAlpha = 1 - t/.8; slides[sc.prevSlide](S.time); ctx.restore(); }
+  // noFade — кадры сами уходят в черноту и появляются из неё, перетекание не нужно
+  if (sc.prevSlide !== undefined && sc.prevSlide !== cur && t < .8 && !sc.def.noFade){ ctx.save(); ctx.globalAlpha = 1 - t/.8; slides[sc.prevSlide](S.time); ctx.restore(); }
   const vg = ctx.createRadialGradient(VW/2, VH/2, VH*.4, VW/2, VH/2, VH); vg.addColorStop(0, 'rgba(10,8,20,0)'); vg.addColorStop(1, 'rgba(10,8,20,.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
   ctx.font = `800 12px ${SANS}`; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(244,237,223,.6)'; ctx.fillText(sc.def.slideLabel ?? 'ПРОЛОГ', 24, 30);
 }

@@ -98,9 +98,9 @@ const SLIDES = [
     ctx.fillStyle = '#1C1626'; ctx.fillRect(VW*.495, VH*.21, 10, VH*.54); ctx.fillRect(VW*.34, VH*.47, VW*.32, 10);
     if (k > 3){ ctx.fillStyle = `rgba(0,0,0,${Math.min(1, (k - 3)/2)})`; ctx.fillRect(0, 0, VW, VH); } },
   // ---------- скрытая сцена: только для игрока (chapters/ch8x.js) ----------
-  function hiddenDepth(){ STRANGER_SHOTS[0](sk()); },  // 11. дно: рука в перчатке сжимает звено
-  function hiddenEyes(){ STRANGER_SHOTS[1](sk()); },   // 12. он открывает глаза и дышит
-  function hiddenRise(){ STRANGER_SHOTS[2](sk()); },   // 13. пробует подняться, огонёк, отпускает звено, затемнение
+  function hiddenDepth(){ if (typeof STRANGER_SHOTS !== 'undefined') STRANGER_SHOTS[0](sk()); },  // 11. дно: рука в перчатке сжимает звено
+  function hiddenEyes(){ if (typeof STRANGER_SHOTS !== 'undefined') STRANGER_SHOTS[1](sk()); },   // 12. он открывает глаза и дышит
+  function hiddenRise(){ if (typeof STRANGER_SHOTS !== 'undefined') STRANGER_SHOTS[2](sk()); },   // 13. пробует подняться, огонёк, отпускает звено, затемнение
   // ---------- экран «Глава пройдена»: Ая у фонаря, фитиль дрожит и загорается, Искра отвечает вспышкой ----------
   function endFrame(t){
     const k = S.endT || 0; bg('#121634', '#2A2440');
